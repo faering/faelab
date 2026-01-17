@@ -2,6 +2,9 @@
 .github/instructions.md
 .bolt/
 
+# Sensitive files
+src/config/portfolio.ts
+
 # Logs
 logs
 *.log
