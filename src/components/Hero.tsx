@@ -26,12 +26,11 @@ const Hero = () => {
           </h1>
           
           <h2 className="text-2xl md:text-3xl text-purple-600 font-light mb-8">
-            (BEng) Electronics Engineer & (MSc) Neuroscientist
+            {portfolioConfig.title}
           </h2>
           
           <p className="text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-            I craft beautiful, functional web experiences that bring ideas to life. 
-            Passionate about clean code, innovative design, and solving complex problems.
+            {portfolioConfig.bio}
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">

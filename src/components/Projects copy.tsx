@@ -3,7 +3,7 @@ import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg'
 import { portfolioConfig } from '../config/portfolio';
 
 
-const Projects = () => {
+export const Projects = () => {
   const projects = [
     {
       title: "E-Commerce Platform",
@@ -12,7 +12,7 @@ const Projects = () => {
       technologies: ["React", "Node.js", "PostgreSQL", "Stripe"],
       githubUrl: "https://github.com",
       liveUrl: "https://example.com",
-      featured: true
+      
     },
     {
       title: "Task Management App",
@@ -167,4 +167,4 @@ const Projects = () => {
   );
 };
 
-export default Projects;
+// export default Projects;
