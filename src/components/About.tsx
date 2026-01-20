@@ -20,11 +20,11 @@ const About = () => {
   ];
 
   return (
-    <section id="about" className="py-20 bg-white">
+    <section id="about" className="py-20 bg-white dark:bg-gray-900">
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-6">
               About Me
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-pink-400 to-purple-400 mx-auto mb-8"></div>
@@ -32,16 +32,16 @@ const About = () => {
 
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h3 className="text-3xl font-bold text-slate-800 mb-6">
+              <h3 className="text-3xl font-bold text-slate-800 dark:text-white mb-6">
                 Turning Ideas Into Reality
               </h3>
-              <p className="text-lg text-slate-600 mb-6 leading-relaxed">
+              <p className="text-lg text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
                 With over 5 years of experience in web development, I specialize in creating 
                 modern, responsive applications that solve real-world problems. My journey 
                 started with a passion for technology and has evolved into a love for crafting 
                 exceptional user experiences.
               </p>
-              <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+              <p className="text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
                 I believe in the power of collaboration, continuous learning, and pushing 
                 the boundaries of what's possible on the web. When I'm not coding, you'll 
                 find me exploring new technologies, contributing to open source, or mentoring 
@@ -49,13 +49,13 @@ const About = () => {
               </p>
               
               <div className="flex flex-wrap gap-4">
-                <span className="bg-pink-100 text-pink-700 px-4 py-2 rounded-full text-sm font-semibold">
+                <span className="bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 px-4 py-2 rounded-full text-sm font-semibold">
                   5+ Years Experience
                 </span>
-                <span className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+                <span className="bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 px-4 py-2 rounded-full text-sm font-semibold">
                   50+ Projects
                 </span>
-                <span className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full text-sm font-semibold">
+                <span className="bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-200 px-4 py-2 rounded-full text-sm font-semibold">
                   Remote Friendly
                 </span>
               </div>
@@ -65,16 +65,16 @@ const About = () => {
               {highlights.map((item, index) => (
                 <div 
                   key={index}
-                  className="flex items-start space-x-4 p-6 bg-rose-50 rounded-xl hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
+                  className="flex items-start space-x-4 p-6 bg-rose-50 dark:bg-rose-900 rounded-xl hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
                 >
                   <div className="flex-shrink-0">
                     {item.icon}
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold text-slate-800 mb-2">
+                    <h4 className="text-xl font-semibold text-slate-800 dark:text-white mb-2">
                       {item.title}
                     </h4>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                       {item.description}
                     </p>
                   </div>

@@ -28,15 +28,15 @@ const Contact = () => {
   };
 
   return (
-    <section id="contact" className="py-20 bg-gradient-to-br from-purple-200 to-pink-200">
+    <section id="contact" className="py-20 bg-gradient-to-br from-purple-200 to-pink-200 dark:bg-gray-900 dark:bg-none">
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-6">
               Let's Work Together
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-pink-400 to-purple-400 mx-auto mb-8"></div>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
               Ready to bring your ideas to life? Let's discuss your next project.
             </p>
           </div>
@@ -44,48 +44,48 @@ const Contact = () => {
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Contact Info */}
             <div>
-              <h3 className="text-2xl font-bold text-slate-800 mb-8">Get In Touch</h3>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-8">Get In Touch</h3>
               
               <div className="space-y-6 mb-10">
                 <div className="flex items-center space-x-4">
-                  <div className="bg-pink-400 p-3 rounded-lg">
+                  <div className="bg-pink-400 dark:bg-pink-900 p-3 rounded-lg">
                     <Mail className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="text-slate-800 font-semibold">Email</h4>
-                    <p className="text-slate-600">{portfolioConfig.email}</p>
+                    <h4 className="text-slate-800 dark:text-white font-semibold">Email</h4>
+                    <p className="text-slate-600 dark:text-slate-300">{portfolioConfig.email}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-4">
-                  <div className="bg-purple-400 p-3 rounded-lg">
+                  <div className="bg-purple-400 dark:bg-purple-900 p-3 rounded-lg">
                     <Phone className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="text-slate-800 font-semibold">Phone</h4>
-                    <p className="text-slate-600">{portfolioConfig.phone}</p>
+                    <h4 className="text-slate-800 dark:text-white font-semibold">Phone</h4>
+                    <p className="text-slate-600 dark:text-slate-300">{portfolioConfig.phone}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-4">
-                  <div className="bg-cyan-400 p-3 rounded-lg">
+                  <div className="bg-cyan-400 dark:bg-cyan-900 p-3 rounded-lg">
                     <MapPin className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="text-slate-800 font-semibold">Location</h4>
-                    <p className="text-slate-600">{portfolioConfig.location}</p>
+                    <h4 className="text-slate-800 dark:text-white font-semibold">Location</h4>
+                    <p className="text-slate-600 dark:text-slate-300">{portfolioConfig.location}</p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-slate-800 font-semibold mb-4">Follow Me</h4>
+                <h4 className="text-slate-800 dark:text-white font-semibold mb-4">Follow Me</h4>
                 <div className="flex space-x-4">
                   <a 
                     href={portfolioConfig.social.github}
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-white/70 p-3 rounded-lg hover:bg-white transition-colors duration-200 transform hover:scale-110"
+                    className="bg-white/70 dark:bg-gray-800 p-3 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-110"
                   >
                     <img src={GitHubIcon} alt="GitHub" className="w-6 h-6" />
                   </a>
@@ -93,7 +93,7 @@ const Contact = () => {
                     href={portfolioConfig.social.linkedin}
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-white/70 p-3 rounded-lg hover:bg-white transition-colors duration-200 transform hover:scale-110"
+                    className="bg-white/70 dark:bg-gray-800 p-3 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-110"
                   >
                     <img src={LinkedInIcon} alt="LinkedIn" className="w-6 h-6" />
                   </a>
@@ -102,11 +102,11 @@ const Contact = () => {
             </div>
 
             {/* Contact Form */}
-            <div className="bg-white/10 backdrop-blur-md p-8 rounded-xl">
+            <div className="bg-white/10 dark:bg-gray-800/80 backdrop-blur-md p-8 rounded-xl">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-slate-800 font-medium mb-2">
+                    <label htmlFor="name" className="block text-slate-800 dark:text-white font-medium mb-2">
                       Name
                     </label>
                     <input
@@ -116,12 +116,12 @@ const Contact = () => {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-white/70 border border-purple-200 rounded-lg text-slate-800 placeholder-slate-500 focus:outline-none focus:border-pink-400 transition-colors duration-200"
+                      className="w-full px-4 py-3 bg-white/70 dark:bg-gray-900 border border-purple-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-pink-400 dark:focus:border-purple-400 transition-colors duration-200"
                       placeholder="Your Name"
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-slate-800 font-medium mb-2">
+                    <label htmlFor="email" className="block text-slate-800 dark:text-white font-medium mb-2">
                       Email
                     </label>
                     <input
@@ -131,14 +131,14 @@ const Contact = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-white/70 border border-purple-200 rounded-lg text-slate-800 placeholder-slate-500 focus:outline-none focus:border-pink-400 transition-colors duration-200"
+                      className="w-full px-4 py-3 bg-white/70 dark:bg-gray-900 border border-purple-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-pink-400 dark:focus:border-purple-400 transition-colors duration-200"
                       placeholder="your.email@example.com"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label htmlFor="subject" className="block text-slate-800 font-medium mb-2">
+                  <label htmlFor="subject" className="block text-slate-800 dark:text-white font-medium mb-2">
                     Subject
                   </label>
                   <input
@@ -148,13 +148,13 @@ const Contact = () => {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 bg-white/70 border border-purple-200 rounded-lg text-slate-800 placeholder-slate-500 focus:outline-none focus:border-pink-400 transition-colors duration-200"
+                    className="w-full px-4 py-3 bg-white/70 dark:bg-gray-900 border border-purple-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-pink-400 dark:focus:border-purple-400 transition-colors duration-200"
                     placeholder="Project Discussion"
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="message" className="block text-slate-800 font-medium mb-2">
+                  <label htmlFor="message" className="block text-slate-800 dark:text-white font-medium mb-2">
                     Message
                   </label>
                   <textarea
@@ -164,14 +164,14 @@ const Contact = () => {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="w-full px-4 py-3 bg-white/70 border border-purple-200 rounded-lg text-slate-800 placeholder-slate-500 focus:outline-none focus:border-pink-400 transition-colors duration-200 resize-none"
+                    className="w-full px-4 py-3 bg-white/70 dark:bg-gray-900 border border-purple-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-pink-400 dark:focus:border-purple-400 transition-colors duration-200 resize-none"
                     placeholder="Tell me about your project..."
                   ></textarea>
                 </div>
                 
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-4 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+                  className="w-full bg-gradient-to-r from-pink-400 to-purple-400 dark:from-purple-700 dark:to-pink-700 hover:from-pink-500 hover:to-purple-500 dark:hover:from-purple-600 dark:hover:to-pink-600 text-white font-semibold py-4 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
                 >
                   <Send className="w-5 h-5 mr-2" />
                   Send Message
