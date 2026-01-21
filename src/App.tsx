@@ -1,4 +1,5 @@
 import Header from './components/Header';
+
 import Hero from './components/Hero';
 import About from './components/About';
 import Skills from './components/Skills';
@@ -9,7 +10,7 @@ import Footer from './components/Footer';
 
 function App() {
   return (
-    <div className="w-full min-h-screen bg-white text-slate-900">
+    <div className="w-full min-h-screen bg-white text-slate-900 dark:bg-gray-900 dark:text-white">
       <Header />
       <Hero />
       <About />
