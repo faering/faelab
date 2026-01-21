@@ -1,6 +1,7 @@
 import { Project } from "../schemas/projectSchema";
-import { Star } from 'lucide-react';
-import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import { Star, ExternalLink } from 'lucide-react';
+import GitHubIconBlack from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import GitHubIconWhite from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
 
 interface ProjectCardProps {
   project: Project;
@@ -62,7 +63,7 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
                 rel="noopener noreferrer"
                 className="flex items-center bg-pink-400 dark:bg-pink-900 hover:bg-pink-500 dark:hover:bg-pink-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 transform hover:scale-105"
               >
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M18 13v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <ExternalLink size={18} className="mr-2" />
                 Live Demo
               </a>
             )}
@@ -73,7 +74,8 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
                 rel="noopener noreferrer"
                 className="flex items-center border-2 border-purple-300 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-600 text-purple-600 dark:text-purple-200 hover:text-purple-700 dark:hover:text-purple-100 px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
               >
-                <img src={GitHubIcon} alt="GitHub" className="w-5 h-5 mr-2" />
+                <img src={GitHubIconBlack} alt="GitHub" className="w-5 h-5 mr-2 block dark:hidden" />
+                <img src={GitHubIconWhite} alt="GitHub" className="w-5 h-5 mr-2 hidden dark:block" />
                 Code
               </a>
             )}
