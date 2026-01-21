@@ -39,6 +39,9 @@ const Header = () => {
 
             {/* Desktop Navigation with Switcher */}
             <div className="hidden md:flex items-center space-x-8">
+              {/* Switcher aligned with buttons */}
+              <Switcher />
+              {/* Menu buttons */}
               {['home', 'about', 'skills', 'projects', 'contact'].map((item, idx, arr) => (
                 <button
                   key={item}
@@ -47,13 +50,9 @@ const Header = () => {
                   className="transition-colors duration-200 capitalize font-medium py-2"
                   style={{ color: 'var(--tw-color-text)' }}
                 >
-                  {item}
+                {item}
                 </button>
               ))}
-              {/* Switcher aligned with buttons */}
-              <div className="flex items-center py-2">
-                <Switcher />
-              </div>
             </div>
 
             {/* Mobile Menu Button */}
