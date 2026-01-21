@@ -35,6 +35,8 @@ html, body, #root {
   --tw-color-cyan-700: #0e7490;
   /* Muted text */
   --tw-color-text-muted: #64748b;
+  /* Text */
+  --tw-color-slate-600: #475569;
 }
 .dark {
   --tw-color-primary: #18181b;
