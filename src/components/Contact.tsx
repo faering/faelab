@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
-import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
-import LinkedInIcon from '../../icons/in-logo/LI-In-Bug.png';
+import GitHubIconBlack from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import GitHubIconWhite from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
+import LinkedInIconBlack from '../../icons/in-logo/InBug-Black.png';
+import LinkedInIconWhite from '../../icons/in-logo/InBug-White.png';
 import { portfolioConfig } from '../config/portfolio';
 
 const Contact = () => {
@@ -87,7 +89,10 @@ const Contact = () => {
                     rel="noopener noreferrer"
                     className="bg-white/70 dark:bg-gray-800 p-3 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-110"
                   >
-                    <img src={GitHubIcon} alt="GitHub" className="w-6 h-6" />
+                    {/* Black icon for light mode */}
+                    <img src={GitHubIconBlack} alt="GitHub" className="w-6 h-6 block dark:hidden" />
+                    {/* White icon for dark mode */}
+                    <img src={GitHubIconWhite} alt="GitHub" className="w-6 h-6 hidden dark:block" />
                   </a>
                   <a 
                     href={portfolioConfig.social.linkedin}
@@ -95,7 +100,10 @@ const Contact = () => {
                     rel="noopener noreferrer"
                     className="bg-white/70 dark:bg-gray-800 p-3 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-110"
                   >
-                    <img src={LinkedInIcon} alt="LinkedIn" className="w-6 h-6" />
+                    {/* Black icon for light mode */}
+                    <img src={LinkedInIconBlack} alt="LinkedIn" className="w-6.5 h-6 block dark:hidden" />
+                    {/* White icon for dark mode */}
+                    <img src={LinkedInIconWhite} alt="LinkedIn" className="w-6.5 h-6 hidden dark:block" />
                   </a>
                 </div>
               </div>
