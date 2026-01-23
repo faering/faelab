@@ -8,6 +8,7 @@ export const ProjectSchema = z.object({
   title: z.string(),
   description: z.string(),
   image: z.string().url().optional(),
+  tags: z.array(z.string()).optional(),
   techStack: z.array(z.string()).min(1),
   repoUrl: z.string().url().optional(),
   liveUrl: z.string().url().optional(),
