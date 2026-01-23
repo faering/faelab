@@ -6,6 +6,7 @@ import { projects as allProjects } from '../../data/Projects';
 import ProjectList from './ProjectList';
 import ViewSettings from './ViewSettingsBox';
 import ProjectFilterDropdown from './ProjectFilterDropdown';
+import ProjectGrid from './ProjectGrid';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
 
@@ -86,7 +87,7 @@ const ProjectsPage: React.FC = () => {
             <span className="text-sm mt-2">Try adjusting your filters.</span>
           </div>
         ) : viewMode === 'grid' ? (
-          <div>{/* ProjectGrid will go here */}</div>
+          <ProjectGrid projects={filteredProjects} />
         ) : (
           <ProjectList projects={filteredProjects} />
         )}
