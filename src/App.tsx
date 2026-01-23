@@ -12,7 +12,7 @@ import ProjectsPage from './pages/Projects/ProjectsPage';
 
 function App() {
   return (
-    <div className="w-full min-h-screen bg-white text-slate-900 dark:bg-gray-900 dark:text-white">
+    <div className="min-h-screen text-slate-900 dark:text-white">
       <Header />
       <Routes>
         <Route
