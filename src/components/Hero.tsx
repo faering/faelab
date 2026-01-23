@@ -1,6 +1,8 @@
 import { ArrowDown, Mail } from 'lucide-react';
-import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
-import LinkedInIcon from '../../icons/in-logo/LI-In-Bug.png';
+import GitHubIconBlack from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import GitHubIconWhite from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
+import LinkedInIconBlack from '../../icons/in-logo/InBug-Black.png';
+import LinkedInIconWhite from '../../icons/in-logo/InBug-White.png';
 import { portfolioConfig } from '../config/portfolio';
 
 const Hero = () => {
@@ -46,24 +48,24 @@ const Hero = () => {
                 href={portfolioConfig.social.github}
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white transition-colors duration-200 transform hover:scale-110"
-              >
-                <img src={GitHubIcon} alt="GitHub" className="w-8 h-8" />
+                className="transition-colors duration-200 transform hover:scale-110">
+                <img src={GitHubIconBlack} alt="GitHub" className="w-8 h-8 block dark:hidden" />
+                <img src={GitHubIconWhite} alt="GitHub" className="w-8 h-8 hidden dark:block" />
               </a>
               <a 
                 href={portfolioConfig.social.linkedin}
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white transition-colors duration-200 transform hover:scale-110"
-              >
-                <img src={LinkedInIcon} alt="LinkedIn" className="w-8 h-8" />
+                className="transition-colors duration-200 transform hover:scale-110">
+                <img src={LinkedInIconBlack} alt="LinkedIn" className="w-9 h-8 block dark:hidden" />
+                <img src={LinkedInIconWhite} alt="LinkedIn" className="w-9 h-8 hidden dark:block" />
               </a>
-              <a 
+              {/* <a 
                 href={`mailto:${portfolioConfig.email}`}
                 className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white transition-colors duration-200 transform hover:scale-110"
               >
                 <Mail size={32} />
-              </a>
+              </a> */}
             </div>
           </div>
           
