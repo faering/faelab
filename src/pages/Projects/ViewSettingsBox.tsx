@@ -1,13 +1,13 @@
 import React from 'react';
 import { LayoutGrid, List } from 'lucide-react';
 
-interface ViewHeaderProps {
+interface ViewSettingsProps {
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
   children?: React.ReactNode;
 }
 
-const ViewHeader: React.FC<ViewHeaderProps> = ({ viewMode, setViewMode, children }) => {
+const ViewSettings: React.FC<ViewSettingsProps> = ({ viewMode, setViewMode, children }) => {
   return (
     <div className="flex items-center justify-between px-6 py-4 mb-8 w-full rounded-xl border border-purple-200 dark:border-purple-700 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 dark:from-purple-900 dark:via-pink-900 dark:to-blue-900 shadow-sm">
       <div className="flex items-center space-x-4">{children /* ProjectFilters will go here */}</div>
@@ -33,4 +33,4 @@ const ViewHeader: React.FC<ViewHeaderProps> = ({ viewMode, setViewMode, children
   );
 };
 
-export default ViewHeader;
+export default ViewSettings;

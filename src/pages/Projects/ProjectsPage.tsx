@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ProjectSchema } from '../../schemas/projectSchema';
 import { projects as allProjects } from '../../data/Projects';
 import ProjectList from './ProjectList';
-import ViewHeader from './ViewHeader';
+import ViewSettings from './ViewSettingsBox';
 import ProjectFilterDropdown from './ProjectFilterDropdown';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
@@ -57,7 +57,7 @@ const ProjectsPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8 mt-20">
 
       {/* View header: Filters (left) and view mode (right) */}
-      <ViewHeader viewMode={viewMode} setViewMode={setViewMode}>
+      <ViewSettings viewMode={viewMode} setViewMode={setViewMode}>
         <ProjectFilterDropdown
           label="Tags"
           options={tagOptions}
@@ -77,7 +77,7 @@ const ProjectsPage: React.FC = () => {
         >
           reset filters
         </button>
-      </ViewHeader>
+      </ViewSettings>
 
       {/* FABs removed. Only one set of controls above the projects view. */}
       {/* Projects view (grid or list) */}
