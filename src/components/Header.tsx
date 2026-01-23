@@ -71,10 +71,62 @@ const Header = () => {
               {/* Switcher aligned with buttons */}
               <Switcher />
               {/* Menu buttons */}
-              {['home', 'about', 'skills', 'projects', 'contact'].map((item) =>
-                item === 'projects' ? (
-                  <div key={item} className="relative group">
+              {(() => {
+                // Dropdown open state for Projects menu
+                const [dropdownOpen, setDropdownOpen] = useState(false);
+                let dropdownTimeout: NodeJS.Timeout | null = null;
+
+                return ['home', 'about', 'skills', 'projects', 'contact'].map((item) =>
+                  item === 'projects' ? (
+                    <div
+                      key={item}
+                      className="relative"
+                      onMouseEnter={() => {
+                        if (dropdownTimeout) clearTimeout(dropdownTimeout);
+                        setDropdownOpen(true);
+                      }}
+                      onMouseLeave={() => {
+                        dropdownTimeout = setTimeout(() => setDropdownOpen(false), 180);
+                      }}
+                    >
+                      <Link
+                        to={location.pathname === '/' ? `#${item}` : `/#${item}`}
+                        onClick={e => {
+                          e.preventDefault();
+                          scrollToSection(item);
+                        }}
+                        className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
+                        style={{ color: 'var(--tw-color-text)' }}
+                      >
+                        <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">Projects</span>
+                      </Link>
+                      {/* Dropdown menu */}
+                      <div
+                        className={`absolute left-0 top-full mt-2 min-w-[180px] bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg transition-opacity duration-200 z-50 ${dropdownOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                      >
+                        <div className="flex flex-col py-2">
+                          <Link
+                            to={location.pathname === '/' ? '#projects' : '/#projects'}
+                            onClick={e => {
+                              e.preventDefault();
+                              scrollToSection('projects');
+                            }}
+                            className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
+                          >
+                            Featured Projects
+                          </Link>
+                          <Link
+                            to="/projects"
+                            className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
+                          >
+                            All Projects
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <Link
+                      key={item}
                       to={location.pathname === '/' ? `#${item}` : `/#${item}`}
                       onClick={e => {
                         e.preventDefault();
@@ -83,45 +135,11 @@ const Header = () => {
                       className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
                       style={{ color: 'var(--tw-color-text)' }}
                     >
-                      <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">Projects</span>
+                      <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{item.charAt(0).toUpperCase() + item.slice(1)}</span>
                     </Link>
-                    {/* Dropdown menu */}
-                    <div className="absolute left-0 top-full mt-2 min-w-[180px] bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-opacity duration-200 z-50">
-                      <div className="flex flex-col py-2">
-                        <Link
-                          to={location.pathname === '/' ? '#projects' : '/#projects'}
-                          onClick={e => {
-                            e.preventDefault();
-                            scrollToSection('projects');
-                          }}
-                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
-                        >
-                          Featured Projects
-                        </Link>
-                        <Link
-                          to="/projects"
-                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
-                        >
-                          All Projects
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    key={item}
-                    to={location.pathname === '/' ? `#${item}` : `/#${item}`}
-                    onClick={e => {
-                      e.preventDefault();
-                      scrollToSection(item);
-                    }}
-                    className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
-                    style={{ color: 'var(--tw-color-text)' }}
-                  >
-                    <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{item.charAt(0).toUpperCase() + item.slice(1)}</span>
-                  </Link>
-                )
-              )}
+                  )
+                );
+              })()}
             </div>
 
             {/* Mobile Menu Button */}
