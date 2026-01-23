@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import Switcher from './Switcher';
 import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
-import Logo from '../icons/in-logo/Logo';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -81,10 +80,10 @@ const Header = () => {
                         e.preventDefault();
                         scrollToSection(item);
                       }}
-                      className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer group-hover:text-purple-600 dark:group-hover:text-purple-300"
+                      className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
                       style={{ color: 'var(--tw-color-text)' }}
                     >
-                      Projects
+                      <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">Projects</span>
                     </Link>
                     {/* Dropdown menu */}
                     <div className="absolute left-0 top-full mt-2 min-w-[180px] bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-opacity duration-200 z-50">
@@ -116,10 +115,10 @@ const Header = () => {
                       e.preventDefault();
                       scrollToSection(item);
                     }}
-                    className="transition-colors duration-200 capitalize font-medium py-2 hover:text-purple-600 dark:hover:text-purple-300"
+                    className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
                     style={{ color: 'var(--tw-color-text)' }}
                   >
-                    {item}
+                    <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{item.charAt(0).toUpperCase() + item.slice(1)}</span>
                   </Link>
                 )
               )}
