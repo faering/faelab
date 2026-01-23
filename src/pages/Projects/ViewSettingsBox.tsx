@@ -9,7 +9,7 @@ interface ViewSettingsProps {
 
 const ViewSettings: React.FC<ViewSettingsProps> = ({ viewMode, setViewMode, children }) => {
   return (
-    <div className="flex items-center justify-between px-6 py-4 mb-8 w-full rounded-xl border border-purple-200 dark:border-purple-700 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 dark:from-purple-900 dark:via-pink-900 dark:to-blue-900 shadow-sm">
+    <div className="flex items-center justify-between px-6 py-3 mb-2 w-full rounded-t-xl bg-white dark:bg-gray-900 shadow-sm">
       <div className="flex items-center space-x-4">{children /* ProjectFilters will go here */}</div>
       <div className="flex space-x-0">
         <button
