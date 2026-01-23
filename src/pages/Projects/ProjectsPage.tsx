@@ -70,6 +70,13 @@ const ProjectsPage: React.FC = () => {
           selected={selectedTools}
           onChange={setSelectedTools}
         />
+        <button
+          type="button"
+          className="ml-2 text-sm font-medium text-purple-700 dark:text-purple-300 hover:underline focus:outline-none bg-transparent border-none p-0"
+          onClick={() => { setSelectedTags([]); setSelectedTools([]); }}
+        >
+          reset filters
+        </button>
       </ViewHeader>
 
       {/* FABs removed. Only one set of controls above the projects view. */}
