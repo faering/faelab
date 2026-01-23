@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
-import Switcher from './Switcher'; // If you rename Switcher.js to Switcher.jsx, this import remains valid
+import Switcher from './Switcher';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,12 +16,28 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+    // If already on landing page, just scroll
+    if (location.pathname === '/') {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+      setIsMenuOpen(false);
+    } else {
+      // If not on landing page, navigate to landing page and scroll after navigation
+      navigate(`/#${sectionId}`);
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      setIsMenuOpen(false);
     }
-    setIsMenuOpen(false);
   };
 
   return (
@@ -33,25 +50,32 @@ const Header = () => {
       <nav className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
             {/*<div className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent dark:bg-gradient-to-r dark:from-purple-400 dark:to-pink-400"> */}
-            <div className="text-2xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, var(--tw-color-pink-500), var(--tw-color-purple-500))' }}>
+            <Link
+              to="/"
+              className="text-2xl font-bold bg-clip-text text-transparent"
+              style={{ backgroundImage: 'linear-gradient(to right, var(--tw-color-pink-500), var(--tw-color-purple-500))' }}
+            >
               Portfolio
-            </div>
+            </Link>
 
             {/* Desktop Navigation with Switcher */}
             <div className="hidden md:flex items-center space-x-8">
               {/* Switcher aligned with buttons */}
               <Switcher />
               {/* Menu buttons */}
-              {['home', 'about', 'skills', 'projects', 'contact'].map((item, idx, arr) => (
-                <button
+              {['home', 'about', 'skills', 'projects', 'contact'].map((item) => (
+                <Link
                   key={item}
-                  onClick={() => scrollToSection(item)}
-                  // className="text-slate-700 dark:text-slate-200 hover:text-pink-500 transition-colors duration-200 capitalize font-medium py-2"
+                  to={location.pathname === '/' ? `#${item}` : `/#${item}`}
+                  onClick={e => {
+                    e.preventDefault();
+                    scrollToSection(item);
+                  }}
                   className="transition-colors duration-200 capitalize font-medium py-2"
                   style={{ color: 'var(--tw-color-text)' }}
                 >
-                {item}
-                </button>
+                  {item}
+                </Link>
               ))}
             </div>
 
@@ -68,19 +92,21 @@ const Header = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          // <div className="md:hidden absolute top-full left-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg">
           <div className="md:hidden absolute top-full left-0 w-full backdrop-blur-md shadow-lg" style={{ backgroundColor: 'var(--tw-color-primary)' }}>
             <div className="flex flex-col py-4">
               {['home', 'about', 'skills', 'projects', 'contact'].map((item) => (
-                <button
+                <Link
                   key={item}
-                  onClick={() => scrollToSection(item)}
-                  // className="text-slate-700 dark:text-slate-200 hover:text-pink-500 transition-colors duration-200 capitalize font-medium py-2 px-6 text-left"
+                  to={location.pathname === '/' ? `#${item}` : `/#${item}`}
+                  onClick={e => {
+                    e.preventDefault();
+                    scrollToSection(item);
+                  }}
                   className="transition-colors duration-200 capitalize font-medium py-2 px-6 text-left"
                   style={{ color: 'var(--tw-color-text)' }}
                 >
                   {item}
-                </button>
+                </Link>
               ))}
             </div>
           </div>
