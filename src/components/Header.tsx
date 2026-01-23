@@ -81,7 +81,7 @@ const Header = () => {
                         e.preventDefault();
                         scrollToSection(item);
                       }}
-                      className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
+                      className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer group-hover:text-purple-600 dark:group-hover:text-purple-300"
                       style={{ color: 'var(--tw-color-text)' }}
                     >
                       Projects
@@ -95,13 +95,13 @@ const Header = () => {
                             e.preventDefault();
                             scrollToSection('projects');
                           }}
-                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-xl transition-colors duration-150 cursor-pointer"
+                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
                         >
                           Featured Projects
                         </Link>
                         <Link
                           to="/projects"
-                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-xl transition-colors duration-150 cursor-pointer"
+                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
                         >
                           All Projects
                         </Link>
@@ -116,7 +116,7 @@ const Header = () => {
                       e.preventDefault();
                       scrollToSection(item);
                     }}
-                    className="transition-colors duration-200 capitalize font-medium py-2"
+                    className="transition-colors duration-200 capitalize font-medium py-2 hover:text-purple-600 dark:hover:text-purple-300"
                     style={{ color: 'var(--tw-color-text)' }}
                   >
                     {item}
