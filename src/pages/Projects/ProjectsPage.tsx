@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigationType } from 'react-router-dom';
 import { z } from 'zod';
 import { ProjectSchema } from '../../schemas/projectSchema';
 import { projects as allProjects } from '../../data/Projects';
@@ -17,6 +18,14 @@ const projects: z.infer<typeof ProjectSchema>[] = [];
 const getUnique = (arr: any[], key: string) => Array.from(new Set(arr.flatMap((p) => p[key] || [])));
 
 const ProjectsPage: React.FC = () => {
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  // Scroll to top only when navigating from another page (PUSH navigation)
+  useEffect(() => {
+    if (navigationType === 'PUSH') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, [location.pathname, navigationType]);
   // Load view mode from localStorage or default to 'grid'
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem(VIEW_MODE_KEY);
