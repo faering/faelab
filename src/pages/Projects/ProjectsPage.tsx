@@ -43,16 +43,6 @@ const ProjectsPage: React.FC = () => {
     return tagMatch && toolMatch;
   });
 
-  // Empty state
-  if (filteredProjects.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
-        <span className="text-lg font-semibold">No projects found.</span>
-        <span className="text-sm mt-2">Try adjusting your filters.</span>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8 mt-20">
 
@@ -79,10 +69,14 @@ const ProjectsPage: React.FC = () => {
         </button>
       </ViewSettings>
 
-      {/* FABs removed. Only one set of controls above the projects view. */}
-      {/* Projects view (grid or list) */}
+      {/* Projects view (grid or list) or empty state */}
       <div>
-        {viewMode === 'grid' ? (
+        {filteredProjects.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
+            <span className="text-lg font-semibold">No projects found.</span>
+            <span className="text-sm mt-2">Try adjusting your filters.</span>
+          </div>
+        ) : viewMode === 'grid' ? (
           <div>{/* ProjectGrid will go here */}</div>
         ) : (
           <ProjectList projects={filteredProjects} />
