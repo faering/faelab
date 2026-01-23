@@ -1,6 +1,9 @@
 import React from 'react';
 import { z } from 'zod';
 import { ProjectSchema } from '../../schemas/projectSchema';
+import { ExternalLink } from 'lucide-react';
+import GitHubIconBlack from '../../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import GitHubIconWhite from '../../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
 
 interface ProjectGridCardProps {
   project: z.infer<typeof ProjectSchema>;
@@ -18,42 +21,55 @@ const ProjectGridCard: React.FC<ProjectGridCardProps> = ({ project }) => {
         />
       )}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300 mb-2">{project.title}</h3>
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">{project.title}</h3>
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{project.description}</p>
       </div>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {project.tags?.map((tag) => (
-          <span key={tag} className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded text-xs">{tag}</span>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2 mt-auto">
-        {project.techStack?.map((tool) => (
-          <span key={tool} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-xs">{tool}</span>
-        ))}
-      </div>
-      <div className="mt-4 flex gap-2">
-        {/* Live Demo button */}
-        {project.liveUrl && (
-          <a
-            href={project.liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition"
-          >
-            Live Demo
-          </a>
-        )}
-        {/* GitHub Repo button */}
-        {project.repoUrl && (
-          <a
-            href={project.repoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-4 py-2 bg-gray-800 text-white text-sm rounded hover:bg-gray-900 transition"
-          >
-            GitHub Repo
-          </a>
-        )}
+      <div className="flex flex-col flex-1 justify-end">
+        {/* Minimum gap above tools */}
+        <div style={{ minHeight: '16px' }} />
+        {/* Tools at top */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          {project.techStack?.map((tool) => (
+            <span key={tool} className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded">
+              {tool}
+            </span>
+          ))}
+        </div>
+        {/* Tags below tools */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          {project.tags?.map((tag) => (
+            <span key={tag} className="bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs px-2 py-1 rounded">
+              {tag}
+            </span>
+          ))}
+        </div>
+        <div className="mt-4 flex gap-2 justify-center">
+          {/* Live Demo button */}
+          {project.liveUrl && (
+            <a
+              href={project.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center bg-pink-400 dark:bg-pink-900 hover:bg-pink-500 dark:hover:bg-pink-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-200 transform hover:scale-105"
+            >
+              <ExternalLink size={16} className="mr-2" />
+              Live Demo
+            </a>
+          )}
+          {/* GitHub Repo button */}
+          {project.repoUrl && (
+            <a
+              href={project.repoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center border-2 border-purple-300 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-600 text-purple-600 dark:text-purple-200 hover:text-purple-700 dark:hover:text-purple-100 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 transform hover:scale-105"
+            >
+              <img src={GitHubIconBlack} alt="GitHub" className="w-5 h-5 mr-2 block dark:hidden" />
+              <img src={GitHubIconWhite} alt="GitHub" className="w-5 h-5 mr-2 hidden dark:block" />
+              Code
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
