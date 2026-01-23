@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import { z } from 'zod';
 import { ProjectSchema } from '../../schemas/projectSchema';
