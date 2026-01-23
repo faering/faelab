@@ -6,11 +6,11 @@ import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg'
 /**
  * Container component responsible for validation + layout
  */
-interface ProjectLayoutProps {
+interface ProjectsFeaturedProps {
   data: unknown[];
 }
 
-export function ProjectLayout({ data }: ProjectLayoutProps) {
+export function ProjectsFeatured({ data }: ProjectsFeaturedProps) {
   // Validate all incoming project data at runtime
   const projects: Project[] = data.map((item) => ProjectSchema.parse(item));
 
@@ -54,4 +54,4 @@ export function ProjectLayout({ data }: ProjectLayoutProps) {
   );
 }
 
-export default ProjectLayout;
+export default ProjectsFeatured;

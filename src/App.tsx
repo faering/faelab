@@ -4,7 +4,7 @@ import Hero from './components/Hero';
 import About from './components/About';
 import Skills from './components/Skills';
 import { projects } from './data/Projects';
-import ProjectLayout from "./components/ProjectLayout";
+import ProjectsFeatured from "./components/ProjectsFeatured";
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 
@@ -15,7 +15,7 @@ function App() {
       <Hero />
       <About />
       <Skills />
-      <ProjectLayout data={projects} />
+      <ProjectsFeatured data={projects} />
       <Contact />
       <Footer />
     </div>
