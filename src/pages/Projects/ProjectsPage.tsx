@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { ProjectSchema } from '../../schemas/projectSchema';
 import { projects as allProjects } from '../../data/Projects';
 import ProjectList from './ProjectList';
+import ViewHeader from './ViewHeader';
+import ProjectFilterDropdown from './ProjectFilterDropdown';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
 
@@ -10,6 +12,9 @@ type ViewMode = 'grid' | 'list';
 
 // Placeholder for projects data (to be replaced with import/API later)
 const projects: z.infer<typeof ProjectSchema>[] = [];
+
+// Extract unique tags and tools from projects
+const getUnique = (arr: any[], key: string) => Array.from(new Set(arr.flatMap((p) => p[key] || [])));
 
 const ProjectsPage: React.FC = () => {
   // Load view mode from localStorage or default to 'grid'
@@ -23,8 +28,20 @@ const ProjectsPage: React.FC = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
-  // Placeholder for filtered projects (add filter logic later)
-  const filteredProjects = allProjects as z.infer<typeof ProjectSchema>[];
+  // Filter state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+
+  // Extract unique tags and tools
+  const tagOptions = getUnique(allProjects, 'tags').map((t) => ({ label: t, value: t }));
+  const toolOptions = getUnique(allProjects, 'techStack').map((t) => ({ label: t, value: t }));
+
+  // Filtering logic
+  const filteredProjects = (allProjects as z.infer<typeof ProjectSchema>[]).filter((project) => {
+    const tagMatch = selectedTags.length === 0 || (project.tags && selectedTags.every((tag) => project.tags.includes(tag)));
+    const toolMatch = selectedTools.length === 0 || (project.techStack && selectedTools.every((tool) => project.techStack.includes(tool)));
+    return tagMatch && toolMatch;
+  });
 
   // Empty state
   if (filteredProjects.length === 0) {
@@ -37,29 +54,25 @@ const ProjectsPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Top bar: Filters (left), View toggle (right) */}
-      <div className="flex items-center justify-between mb-6">
-        <div>{/* ProjectFilters will go here */}</div>
-        <div className="flex space-x-2">
-          <button
-            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
-          >
-            {/* Grid icon */}
-            <span className="material-icons">grid_view</span>
-          </button>
-          <button
-            className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
-            onClick={() => setViewMode('list')}
-            aria-label="List view"
-          >
-            {/* List icon */}
-            <span className="material-icons">view_list</span>
-          </button>
-        </div>
-      </div>
+    <div className="container mx-auto px-4 py-8 mt-20">
+
+      {/* View header: Filters (left) and view mode (right) */}
+      <ViewHeader viewMode={viewMode} setViewMode={setViewMode}>
+        <ProjectFilterDropdown
+          label="Tags"
+          options={tagOptions}
+          selected={selectedTags}
+          onChange={setSelectedTags}
+        />
+        <ProjectFilterDropdown
+          label="Tools"
+          options={toolOptions}
+          selected={selectedTools}
+          onChange={setSelectedTools}
+        />
+      </ViewHeader>
+
+      {/* FABs removed. Only one set of controls above the projects view. */}
       {/* Projects view (grid or list) */}
       <div>
         {viewMode === 'grid' ? (
