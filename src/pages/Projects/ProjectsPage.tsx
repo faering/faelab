@@ -54,45 +54,48 @@ const ProjectsPage: React.FC = () => {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8 mt-20">
+    <section className="min-h-screen flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-rose-200 via-purple-200 to-indigo-200 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"></div>
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.1%22%3E%3Cpath%20d%3D%22m36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+      <div className="container mx-auto px-4 py-8 mt-20 relative z-10">
+        {/* View header: Filters (left) and view mode (right) */}
+        <ViewSettings viewMode={viewMode} setViewMode={setViewMode}>
+          <ProjectFilterDropdown
+            label="Tags"
+            options={tagOptions}
+            selected={selectedTags}
+            onChange={setSelectedTags}
+          />
+          <ProjectFilterDropdown
+            label="Tools"
+            options={toolOptions}
+            selected={selectedTools}
+            onChange={setSelectedTools}
+          />
+          <button
+            type="button"
+            className="ml-2 text-sm font-medium text-purple-700 dark:text-purple-300 hover:underline focus:outline-none bg-transparent border-none p-0"
+            onClick={() => { setSelectedTags([]); setSelectedTools([]); }}
+          >
+            reset filters
+          </button>
+        </ViewSettings>
 
-      {/* View header: Filters (left) and view mode (right) */}
-      <ViewSettings viewMode={viewMode} setViewMode={setViewMode}>
-        <ProjectFilterDropdown
-          label="Tags"
-          options={tagOptions}
-          selected={selectedTags}
-          onChange={setSelectedTags}
-        />
-        <ProjectFilterDropdown
-          label="Tools"
-          options={toolOptions}
-          selected={selectedTools}
-          onChange={setSelectedTools}
-        />
-        <button
-          type="button"
-          className="ml-2 text-sm font-medium text-purple-700 dark:text-purple-300 hover:underline focus:outline-none bg-transparent border-none p-0"
-          onClick={() => { setSelectedTags([]); setSelectedTools([]); }}
-        >
-          reset filters
-        </button>
-      </ViewSettings>
-
-      {/* Projects view (grid or list) or empty state */}
-      <div>
-        {filteredProjects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
-            <span className="text-lg font-semibold">No projects found.</span>
-            <span className="text-sm mt-2">Try adjusting your filters.</span>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <ProjectGrid projects={filteredProjects} />
-        ) : (
-          <ProjectList projects={filteredProjects} />
-        )}
+        {/* Projects view (grid or list) or empty state */}
+        <div>
+          {filteredProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
+              <span className="text-lg font-semibold">No projects found.</span>
+              <span className="text-sm mt-2">Try adjusting your filters.</span>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <ProjectGrid projects={filteredProjects} />
+          ) : (
+            <ProjectList projects={filteredProjects} />
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 

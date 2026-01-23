@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import Switcher from './Switcher';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import Logo from '../icons/in-logo/Logo';
+
+const navLinks = [
+  { label: 'Home', to: '/' },
+  { label: 'About', to: '/#about' },
+  { label: 'Skills', to: '/#skills' },
+  { label: 'Projects', to: '/#projects' },
+  { label: 'Contact', to: '/#contact' },
+];
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
