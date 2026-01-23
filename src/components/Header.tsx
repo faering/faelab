@@ -72,20 +72,57 @@ const Header = () => {
               {/* Switcher aligned with buttons */}
               <Switcher />
               {/* Menu buttons */}
-              {['home', 'about', 'skills', 'projects', 'contact'].map((item) => (
-                <Link
-                  key={item}
-                  to={location.pathname === '/' ? `#${item}` : `/#${item}`}
-                  onClick={e => {
-                    e.preventDefault();
-                    scrollToSection(item);
-                  }}
-                  className="transition-colors duration-200 capitalize font-medium py-2"
-                  style={{ color: 'var(--tw-color-text)' }}
-                >
-                  {item}
-                </Link>
-              ))}
+              {['home', 'about', 'skills', 'projects', 'contact'].map((item) =>
+                item === 'projects' ? (
+                  <div key={item} className="relative group">
+                    <Link
+                      to={location.pathname === '/' ? `#${item}` : `/#${item}`}
+                      onClick={e => {
+                        e.preventDefault();
+                        scrollToSection(item);
+                      }}
+                      className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
+                      style={{ color: 'var(--tw-color-text)' }}
+                    >
+                      Projects
+                    </Link>
+                    {/* Dropdown menu */}
+                    <div className="absolute left-0 top-full mt-2 min-w-[180px] bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-opacity duration-200 z-50">
+                      <div className="flex flex-col py-2">
+                        <Link
+                          to={location.pathname === '/' ? '#projects' : '/#projects'}
+                          onClick={e => {
+                            e.preventDefault();
+                            scrollToSection('projects');
+                          }}
+                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-xl transition-colors duration-150 cursor-pointer"
+                        >
+                          Featured Projects
+                        </Link>
+                        <Link
+                          to="/projects"
+                          className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-xl transition-colors duration-150 cursor-pointer"
+                        >
+                          All Projects
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Link
+                    key={item}
+                    to={location.pathname === '/' ? `#${item}` : `/#${item}`}
+                    onClick={e => {
+                      e.preventDefault();
+                      scrollToSection(item);
+                    }}
+                    className="transition-colors duration-200 capitalize font-medium py-2"
+                    style={{ color: 'var(--tw-color-text)' }}
+                  >
+                    {item}
+                  </Link>
+                )
+              )}
             </div>
 
             {/* Mobile Menu Button */}
