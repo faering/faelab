@@ -1,7 +1,6 @@
 import { ProjectSchema, Project } from "../schemas/projectSchema";
 import { ProjectCard } from "./ProjectCard";
-import { portfolioConfig } from '../config/portfolio';
-import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import { Link } from 'react-router-dom';
 
 /**
  * Container component responsible for validation + layout
@@ -36,17 +35,15 @@ export function ProjectsFeatured({ data }: ProjectsFeaturedProps) {
 
           <div className="text-center mt-16">
             <p className="text-lg text-slate-600 mb-8">
-              Want to see more? Check out my GitHub for additional projects and contributions.
+              Want to see more? Explore all my projects in detail.
             </p>
-            <a
-              href={`${portfolioConfig.social.github}?tab=repositories`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/projects"
               className="inline-flex items-center bg-purple-400 hover:bg-purple-500 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 transform hover:scale-105"
             >
-              <img src={GitHubIcon} alt="GitHub" className="w-5 h-5 mr-2 invert" />
+              <span className="material-icons w-5 h-5 mr-2">view_module</span>
               View All Projects
-            </a>
+            </Link>
           </div>
         </div>
       </div>
