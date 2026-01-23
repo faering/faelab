@@ -13,20 +13,34 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({ viewMode, setViewMode, chil
       <div className="flex items-center space-x-4">{children /* ProjectFilters will go here */}</div>
       <div className="flex space-x-0">
         <button
-          className={`flex items-center justify-center w-12 h-12 rounded-l-xl rounded-r-none transition-colors duration-150
-            ${viewMode === 'grid' ? 'bg-primary text-white shadow-md' : 'bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-200'}`}
+          className={`flex items-center justify-center w-12 h-12 rounded-l-xl rounded-r-none border border-slate-200 dark:border-slate-700 transition-colors duration-150
+            ${viewMode === 'grid' ? 'bg-primary text-white dark:bg-slate-900' : 'bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-200'}`}
           onClick={() => setViewMode('grid')}
           aria-label="Grid view"
         >
-          <LayoutGrid size={28} className={viewMode === 'grid' ? 'text-white' : 'text-gray-400 dark:text-gray-500'} />
+          <LayoutGrid
+            size={28}
+            className={
+              viewMode === 'grid'
+                ? 'text-white dark:text-gray-500'
+                : 'text-gray-400 dark:text-gray-300'
+            }
+          />
         </button>
         <button
-          className={`flex items-center justify-center w-12 h-12 rounded-r-xl rounded-l-none transition-colors duration-150
-            ${viewMode === 'list' ? 'bg-primary text-white shadow-md' : 'bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-200'}`}
+          className={`flex items-center justify-center w-12 h-12 rounded-r-xl rounded-l-none border border-slate-200 dark:border-slate-700 transition-colors duration-150
+            ${viewMode === 'list' ? 'bg-primary text-white dark:bg-slate-900' : 'bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-200'}`}
           onClick={() => setViewMode('list')}
           aria-label="List view"
         >
-          <List size={28} className={viewMode === 'list' ? 'text-white' : 'text-gray-400 dark:text-gray-500'} />
+          <List
+            size={28}
+            className={
+              viewMode === 'list'
+                ? 'text-white dark:text-gray-500'
+                : 'text-gray-400 dark:text-gray-300'
+            }
+          />
         </button>
       </div>
     </div>
