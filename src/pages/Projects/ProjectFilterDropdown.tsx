@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface Option {
   label: string;
@@ -14,8 +14,28 @@ interface ProjectFilterDropdownProps {
 
 const ProjectFilterDropdown: React.FC<ProjectFilterDropdownProps> = ({ label, options, selected, onChange }) => {
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = () => setOpen((prev) => !prev);
+
+  // Close dropdown on click outside or Escape
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
   const handleOptionChange = (value: string) => {
     if (selected.includes(value)) {
       onChange(selected.filter((v) => v !== value));
@@ -25,7 +45,7 @@ const ProjectFilterDropdown: React.FC<ProjectFilterDropdownProps> = ({ label, op
   };
 
   return (
-    <div className="relative inline-block text-left">
+    <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
         type="button"
         className="inline-flex justify-center w-full rounded-md border border-gray-300 dark:border-gray-700 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none"
