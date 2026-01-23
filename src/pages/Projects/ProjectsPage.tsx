@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { ProjectSchema } from '../../schemas/projectSchema';
-
-// Placeholder for projects data (to be replaced with import/API later)
-const projects: z.infer<typeof ProjectSchema>[] = [];
+import { projects as allProjects } from '../../data/Projects';
+import ProjectList from './ProjectList';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
 
 type ViewMode = 'grid' | 'list';
+
+// Placeholder for projects data (to be replaced with import/API later)
+const projects: z.infer<typeof ProjectSchema>[] = [];
 
 const ProjectsPage: React.FC = () => {
   // Load view mode from localStorage or default to 'grid'
@@ -22,7 +24,7 @@ const ProjectsPage: React.FC = () => {
   }, [viewMode]);
 
   // Placeholder for filtered projects (add filter logic later)
-  const filteredProjects = projects;
+  const filteredProjects = allProjects as z.infer<typeof ProjectSchema>[];
 
   // Empty state
   if (filteredProjects.length === 0) {
@@ -63,7 +65,7 @@ const ProjectsPage: React.FC = () => {
         {viewMode === 'grid' ? (
           <div>{/* ProjectGrid will go here */}</div>
         ) : (
-          <div>{/* ProjectList will go here */}</div>
+          <ProjectList projects={filteredProjects} />
         )}
       </div>
     </div>
