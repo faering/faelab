@@ -1,6 +1,6 @@
 import React from 'react';
 import { z } from 'zod';
-import { ProjectSchema } from '../../schemas/projectSchema';
+import { ProjectSchema } from '../../../../../packages/types/projectSchema';
 import ProjectListItem from './ProjectListItem';
 
 interface ProjectListProps {
