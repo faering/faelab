@@ -1,11 +1,8 @@
-export interface Project {
-  id: string;
-  title: string;
-  imageUrl?: string;
-}
+
+import { Project } from '../../../../../packages/types/projectSchema';
 
 const projects: Project[] = [
-  { id: '1', title: 'Portfolio Website' },
+  { id: '1', title: 'Portfolio Website',  },
   { id: '2', title: 'CMS API' },
 ];
 
