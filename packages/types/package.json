@@ -1,0 +1,10 @@
+{
+    "name": "@portfolio/types",
+    "version": "0.1.0",
+    "main": "projectSchema.ts",
+    "types": "projectSchema.ts",
+    "private": true,
+    "dependencies": {
+        "zod": "^3.0.0"
+    }
+}
