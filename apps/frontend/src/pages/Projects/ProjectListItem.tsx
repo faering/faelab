@@ -1,6 +1,6 @@
 import React from 'react';
 import { z } from 'zod';
-import { ProjectSchema } from '../../schemas/projectSchema';
+import { ProjectSchema } from '../../../../../packages/types/projectSchema';
 import { ExternalLink } from 'lucide-react';
 import GitHubIconBlack from '../../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
 import GitHubIconWhite from '../../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';

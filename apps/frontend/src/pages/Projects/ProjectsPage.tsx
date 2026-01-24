@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import { z } from 'zod';
-import { ProjectSchema } from '../../schemas/projectSchema';
+import { ProjectSchema } from '../../../../../packages/types/projectSchema';
 import { projects as allProjects } from '../../data/Projects';
 import ProjectList from './ProjectList';
 import ViewSettings from './ViewSettingsBox';
