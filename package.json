@@ -5,10 +5,11 @@
     "type": "module",
     "packageManager": "pnpm@9.15.1",
     "scripts": {
-        "dev": "pnpm --filter ./apps/frontend dev",
+        "dev": "pnpm --filter ./apps/api --filter ./apps/frontend --parallel dev",
         "build": "pnpm --filter ./apps/frontend build",
         "lint": "pnpm --filter ./apps/frontend lint",
         "preview": "pnpm --filter ./apps/frontend preview",
+        "api:dev": "pnpm --filter ./apps/api dev",
         "frontend:dev": "pnpm --filter ./apps/frontend dev",
         "frontend:build": "pnpm --filter ./apps/frontend build",
         "frontend:lint": "pnpm --filter ./apps/frontend lint"
