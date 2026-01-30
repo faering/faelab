@@ -1,6 +1,8 @@
-import { buildServer } from './server';
+import './env';
 
-const app = buildServer();
+import { createServer } from './server/createServer';
+
+const app = createServer();
 
 app.listen({ port: 3001, host: '0.0.0.0' }, (err) => {
   if (err) {
