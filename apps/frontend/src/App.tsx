@@ -1,13 +1,8 @@
 import { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
-import Hero from './components/Hero';
-import About from './components/About';
-import Skills from './components/Skills';
-import { projects } from './data/Projects';
-import ProjectsFeatured from "./components/ProjectsFeatured";
-import Contact from './components/Contact';
 import Footer from './components/Footer';
+import HomePage from './pages/Home/HomePage';
 import ProjectsPage from './pages/Projects/ProjectsPage';
 
 const CMS_OPEN_KEY = 'projectsCmsOpen';
@@ -33,18 +28,7 @@ function App() {
     <div className="min-h-screen text-slate-900 dark:text-white">
       <Header />
       <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              <Hero />
-              <About />
-              <Skills />
-              <ProjectsFeatured data={projects} />
-              <Contact />
-            </>
-          }
-        />
+        <Route path="/" element={<HomePage />} />
         <Route path="/projects" element={<ProjectsPage />} />
       </Routes>
       <Footer />

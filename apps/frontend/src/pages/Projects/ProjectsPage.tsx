@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import type { Project } from '../../../../../packages/types/projectSchema';
-import { projects as allProjects } from '../../data/Projects';
 import ProjectList from './ProjectList';
 import ViewSettings from './ViewSettingsBox';
 import ProjectFilterDropdown from './ProjectFilterDropdown';
 import ProjectGrid from './ProjectGrid';
 import ProjectsCmsPopup from './ProjectsCmsPopup';
+import { trpc } from '../../trpc/trpc';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
 
 type ViewMode = 'grid' | 'list';
 
 // Extract unique tags and tools from projects
-const getUnique = (arr: any[], key: string) => Array.from(new Set(arr.flatMap((p) => p[key] || [])));
+const getUnique = (arr: Project[], key: 'tags' | 'techStack') =>
+  Array.from(new Set(arr.flatMap((p) => p[key] ?? [])));
 
 const ProjectsPage: React.FC = () => {
+  const projectsQuery = trpc.projects.list.useQuery(undefined, {
+    staleTime: 30_000,
+  });
+
+  const allProjects: Project[] = projectsQuery.data ?? [];
+
   const location = useLocation();
   const navigationType = useNavigationType();
   // Scroll to top only when navigating from another page (PUSH navigation)
@@ -92,9 +99,20 @@ const ProjectsPage: React.FC = () => {
           </button>
         </ViewSettings>
 
-        {/* Projects view (grid or list) or empty state */}
+        {/* Projects view (grid or list) */}
         <div>
-          {filteredProjects.length === 0 ? (
+          {projectsQuery.isLoading ? (
+            <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
+              <span className="text-lg font-semibold">Loading projects…</span>
+            </div>
+          ) : projectsQuery.isError ? (
+            <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
+              <span className="text-lg font-semibold">Could not load projects.</span>
+              <span className="text-sm mt-2">
+                {projectsQuery.error instanceof Error ? projectsQuery.error.message : 'Unknown error'}
+              </span>
+            </div>
+          ) : filteredProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
               <span className="text-lg font-semibold">No projects found.</span>
               <span className="text-sm mt-2">Try adjusting your filters.</span>

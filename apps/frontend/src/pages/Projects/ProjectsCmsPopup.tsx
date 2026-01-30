@@ -1,10 +1,9 @@
 import React from 'react';
 import { Plus, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
-import { ProjectSchema, type Project } from '../../../../../packages/types/projectSchema';
+import type { Project } from '../../../../../packages/types/projectSchema';
 import { trpc } from '../../trpc/trpc';
 
 const CMS_STATE_KEY = 'projectsCmsState';
-const CMS_PROJECTS_KEY = 'projectsCmsProjects';
 const CMS_SIDEBAR_KEY = 'projectsCmsSidebarCollapsed';
 
 type ViewState =
@@ -88,25 +87,6 @@ function safeParsePersistedState(raw: string | null): PersistedCmsState | null {
   }
 }
 
-function safeParsePersistedProjects(raw: string | null): Project[] | null {
-  if (!raw) return null;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-
-    const projects: Project[] = [];
-    for (const item of parsed) {
-      const result = ProjectSchema.safeParse(item);
-      if (result.success) projects.push(result.data);
-    }
-
-    return projects.length > 0 ? projects : null;
-  } catch {
-    return null;
-  }
-}
-
 function projectToDraft(project: Project): ProjectDraft {
   return {
     title: project.title,
@@ -172,6 +152,36 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     refetchOnWindowFocus: false,
   });
 
+  const utils = trpc.useUtils();
+
+  const createMutation = trpc.projects.create.useMutation({
+    onSuccess: (created) => {
+      utils.projects.list.setData(undefined, (prev) => [created, ...(prev ?? [])]);
+      setErrors({});
+      setDraft(projectToDraft(created));
+      setView({ kind: 'edit', id: created.id });
+    },
+  });
+
+  const updateMutation = trpc.projects.update.useMutation({
+    onSuccess: (updated) => {
+      utils.projects.list.setData(undefined, (prev) => (prev ?? []).map((p) => (p.id === updated.id ? updated : p)));
+      setErrors({});
+    },
+  });
+
+  const deleteMutation = trpc.projects.delete.useMutation({
+    onSuccess: (deleted) => {
+      utils.projects.list.setData(undefined, (prev) => (prev ?? []).filter((p) => p.id !== deleted.id));
+      setPendingDelete(null);
+
+      if (view.kind === 'edit' && view.id === deleted.id) {
+        setView({ kind: 'list' });
+        setDraft(emptyDraft());
+      }
+    },
+  });
+
   const [view, setView] = React.useState<ViewState>(() => {
     try {
       return safeParsePersistedState(localStorage.getItem(CMS_STATE_KEY))?.view ?? { kind: 'list' };
@@ -179,14 +189,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
       return { kind: 'list' };
     }
   });
-  const [projects, setProjects] = React.useState<Project[]>(() => {
-    try {
-      return safeParsePersistedProjects(localStorage.getItem(CMS_PROJECTS_KEY)) ?? [];
-    } catch {
-      return [];
-    }
-  });
-  const projectsHydratedRef = React.useRef(false);
+  const projects: Project[] = trpcListQuery.data ?? [];
 
   const [draft, setDraft] = React.useState<ProjectDraft>(() => {
     try {
@@ -227,35 +230,6 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
       // ignore (storage unavailable)
     }
   }, [view, draft]);
-
-  React.useEffect(() => {
-    // Prefer locally persisted CMS data; otherwise seed from the static projects list.
-    try {
-      const persisted = safeParsePersistedProjects(localStorage.getItem(CMS_PROJECTS_KEY));
-      if (persisted && persisted.length > 0) {
-        setProjects(persisted);
-        projectsHydratedRef.current = true;
-        return;
-      }
-    } catch {
-      // ignore
-    }
-
-    import('../../data/Projects').then((m) => {
-      const data = (m.projects as unknown as Project[]) ?? [];
-      setProjects(data);
-      projectsHydratedRef.current = true;
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (!projectsHydratedRef.current) return;
-    try {
-      localStorage.setItem(CMS_PROJECTS_KEY, JSON.stringify(projects));
-    } catch {
-      // ignore (storage unavailable)
-    }
-  }, [projects]);
 
   React.useEffect(() => {
     if (view.kind !== 'edit') return;
@@ -354,15 +328,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
   const confirmDelete = () => {
     if (!pendingDelete) return;
 
-    const id = pendingDelete.id;
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    setErrors({});
-    setPendingDelete(null);
-
-    if (view.kind === 'edit' && view.id === id) {
-      setView({ kind: 'list' });
-      setDraft(emptyDraft());
-    }
+    deleteMutation.mutate({ id: pendingDelete.id });
   };
 
   const onSave = () => {
@@ -370,7 +336,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const base: Omit<Project, 'id'> = {
+    const base = {
       title: draft.title.trim(),
       description: draft.description.trim(),
       techStack,
@@ -382,14 +348,21 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     };
 
     if (view.kind === 'create') {
-      const id = crypto.randomUUID();
-      setProjects((prev) => [{ id, ...base }, ...prev]);
-      setView({ kind: 'edit', id });
+      createMutation.mutate({
+        ...base,
+        tags: base.tags.length > 0 ? base.tags : undefined,
+      });
       return;
     }
 
     if (view.kind === 'edit') {
-      setProjects((prev) => prev.map((p) => (p.id === view.id ? { id: view.id, ...base } : p)));
+      updateMutation.mutate({
+        id: view.id,
+        data: {
+          ...base,
+          tags: base.tags.length > 0 ? base.tags : undefined,
+        },
+      });
     }
   };
 
@@ -432,7 +405,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
 
         {!isSidebarCollapsed && (
           <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-            Data wiring comes next.
+            Connected to the database via tRPC.
           </div>
         )}
       </aside>
@@ -470,11 +443,23 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                 type="button"
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors"
                 onClick={startCreate}
+                disabled={createMutation.isPending || updateMutation.isPending || deleteMutation.isPending}
               >
                 <Plus size={18} />
                 New
               </button>
             </div>
+
+            {(createMutation.isError || updateMutation.isError || deleteMutation.isError) && (
+              <div className="mb-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+                {(
+                  createMutation.error?.message ||
+                  updateMutation.error?.message ||
+                  deleteMutation.error?.message ||
+                  'Request failed'
+                )}
+              </div>
+            )}
 
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-slate-100/70 dark:bg-slate-800/30 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
@@ -484,9 +469,15 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                 <div className="col-span-2 text-right">Actions</div>
               </div>
 
-              {projects.length === 0 ? (
+              {trpcListQuery.isLoading ? (
+                <div className="px-4 py-10 text-sm text-slate-600 dark:text-slate-300">Loading projects…</div>
+              ) : trpcListQuery.isError ? (
+                <div className="px-4 py-10 text-sm text-red-700 dark:text-red-300">
+                  Could not load projects: {trpcListQuery.error.message}
+                </div>
+              ) : projects.length === 0 ? (
                 <div className="px-4 py-10 text-sm text-slate-600 dark:text-slate-300">
-                  No projects loaded yet.
+                  No projects in the database yet.
                 </div>
               ) : (
                 <div className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -508,6 +499,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                           type="button"
                           className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm"
                           onClick={() => startEdit(p.id)}
+                          disabled={deleteMutation.isPending}
                         >
                           Edit
                         </button>
@@ -517,6 +509,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-sm"
                           onClick={() => requestDelete(p.id)}
                           aria-label={`Delete ${p.title}`}
+                          disabled={deleteMutation.isPending}
                         >
                           <Trash2 size={16} />
                           Delete
@@ -546,17 +539,19 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                     type="button"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                     onClick={() => requestDelete(view.id)}
+                    disabled={deleteMutation.isPending}
                   >
                     <Trash2 size={18} />
-                    Delete
+                    {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
                   </button>
                 )}
                 <button
                   type="button"
                   className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors"
                   onClick={onSave}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 >
-                  Save
+                  {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </div>
