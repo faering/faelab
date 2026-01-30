@@ -131,7 +131,41 @@ function validateDraft(draft: ProjectDraft) {
   return { errors, techStack };
 }
 
-export default function ProjectsCmsPopup() {
+export type ProjectsCmsPopupProps = {
+  onDirtyChange?: (dirty: boolean) => void;
+};
+
+function normalizeText(value: string | undefined) {
+  return (value ?? '').trim();
+}
+
+function isDraftEmpty(draft: ProjectDraft) {
+  return (
+    normalizeText(draft.title) === '' &&
+    normalizeText(draft.description) === '' &&
+    normalizeText(draft.techStack) === '' &&
+    normalizeText(draft.tags) === '' &&
+    normalizeText(draft.image) === '' &&
+    normalizeText(draft.repoUrl) === '' &&
+    normalizeText(draft.liveUrl) === '' &&
+    draft.featured === false
+  );
+}
+
+function isDraftDifferent(a: ProjectDraft, b: ProjectDraft) {
+  return (
+    normalizeText(a.title) !== normalizeText(b.title) ||
+    normalizeText(a.description) !== normalizeText(b.description) ||
+    normalizeText(a.techStack) !== normalizeText(b.techStack) ||
+    normalizeText(a.tags) !== normalizeText(b.tags) ||
+    normalizeText(a.image) !== normalizeText(b.image) ||
+    normalizeText(a.repoUrl) !== normalizeText(b.repoUrl) ||
+    normalizeText(a.liveUrl) !== normalizeText(b.liveUrl) ||
+    a.featured !== b.featured
+  );
+}
+
+export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProps) {
   const [view, setView] = React.useState<ViewState>(() => {
     try {
       return safeParsePersistedState(localStorage.getItem(CMS_STATE_KEY))?.view ?? { kind: 'list' };
@@ -159,6 +193,9 @@ export default function ProjectsCmsPopup() {
 
   const [pendingDelete, setPendingDelete] = React.useState<null | { id: string; title: string }>(null);
   const noButtonRef = React.useRef<HTMLButtonElement | null>(null);
+
+  const [pendingNavigateBack, setPendingNavigateBack] = React.useState(false);
+  const noDiscardNavRef = React.useRef<HTMLButtonElement | null>(null);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(() => {
     try {
@@ -238,6 +275,39 @@ export default function ProjectsCmsPopup() {
     noButtonRef.current?.focus();
   }, [pendingDelete]);
 
+  React.useEffect(() => {
+    if (!pendingNavigateBack) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingNavigateBack(false);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [pendingNavigateBack]);
+
+  React.useEffect(() => {
+    if (!pendingNavigateBack) return;
+    noDiscardNavRef.current?.focus();
+  }, [pendingNavigateBack]);
+
+  const isDirty = React.useMemo(() => {
+    if (pendingDelete) return false;
+
+    if (view.kind === 'list') return false;
+    if (view.kind === 'create') return !isDraftEmpty(draft);
+
+    const project = projects.find((p) => p.id === view.id);
+    if (!project) return false;
+
+    const baseline = projectToDraft(project);
+    return isDraftDifferent(draft, baseline);
+  }, [draft, pendingDelete, projects, view]);
+
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   const startCreate = () => {
     setErrors({});
     setDraft(emptyDraft());
@@ -254,7 +324,19 @@ export default function ProjectsCmsPopup() {
   };
 
   const goBackToList = () => {
+    if (isDirty) {
+      setPendingNavigateBack(true);
+      return;
+    }
+
     setErrors({});
+    setView({ kind: 'list' });
+  };
+
+  const confirmNavigateBackDiscard = () => {
+    setPendingNavigateBack(false);
+    setErrors({});
+    setDraft(emptyDraft());
     setView({ kind: 'list' });
   };
 
@@ -596,6 +678,49 @@ export default function ProjectsCmsPopup() {
               >
                 <Trash2 size={18} />
                 Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingNavigateBack && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Keep editing"
+            onClick={() => setPendingNavigateBack(false)}
+          />
+
+          <div
+            className="relative w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 shadow-xl p-5"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Discard changes"
+          >
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Discard changes?
+            </div>
+            <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              You have unsaved changes. Do you want to discard them and go back to the list?
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                ref={noDiscardNavRef}
+                type="button"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
+                onClick={() => setPendingNavigateBack(false)}
+              >
+                No, keep editing
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                onClick={confirmNavigateBackDiscard}
+              >
+                Yes, discard
               </button>
             </div>
           </div>

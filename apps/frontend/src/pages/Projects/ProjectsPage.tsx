@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
-import { z } from 'zod';
-import { ProjectSchema } from '../../../../../packages/types/projectSchema';
+import type { Project } from '../../../../../packages/types/projectSchema';
 import { projects as allProjects } from '../../data/Projects';
 import ProjectList from './ProjectList';
 import ViewSettings from './ViewSettingsBox';
@@ -12,9 +11,6 @@ import ProjectsCmsPopup from './ProjectsCmsPopup';
 const VIEW_MODE_KEY = 'projectsViewMode';
 
 type ViewMode = 'grid' | 'list';
-
-// Placeholder for projects data (to be replaced with import/API later)
-const projects: z.infer<typeof ProjectSchema>[] = [];
 
 // Extract unique tags and tools from projects
 const getUnique = (arr: any[], key: string) => Array.from(new Set(arr.flatMap((p) => p[key] || [])));
@@ -43,14 +39,19 @@ const ProjectsPage: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
+  const [cmsIsDirty, setCmsIsDirty] = useState(false);
+
   // Extract unique tags and tools
   const tagOptions = getUnique(allProjects, 'tags').map((t) => ({ label: t, value: t }));
   const toolOptions = getUnique(allProjects, 'techStack').map((t) => ({ label: t, value: t }));
 
   // Filtering logic
-  const filteredProjects = (allProjects as z.infer<typeof ProjectSchema>[]).filter((project) => {
-    const tagMatch = selectedTags.length === 0 || (project.tags && selectedTags.every((tag) => project.tags.includes(tag)));
-    const toolMatch = selectedTools.length === 0 || (project.techStack && selectedTools.every((tool) => project.techStack.includes(tool)));
+  const filteredProjects = (allProjects as Project[]).filter((project) => {
+    const tags = project.tags ?? [];
+    const techStack = project.techStack ?? [];
+
+    const tagMatch = selectedTags.length === 0 || selectedTags.every((tag) => tags.includes(tag));
+    const toolMatch = selectedTools.length === 0 || selectedTools.every((tool) => techStack.includes(tool));
     return tagMatch && toolMatch;
   });
 
@@ -64,7 +65,11 @@ const ProjectsPage: React.FC = () => {
           viewMode={viewMode}
           setViewMode={setViewMode}
           cmsTitle="Projects CMS"
-          cmsContent={<ProjectsCmsPopup />}
+          cmsIsDirty={cmsIsDirty}
+          onCmsOpenChange={(open) => {
+            if (!open) setCmsIsDirty(false);
+          }}
+          cmsContent={<ProjectsCmsPopup onDirtyChange={setCmsIsDirty} />}
         >
           <ProjectFilterDropdown
             label="Tags"

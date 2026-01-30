@@ -2,6 +2,7 @@ import React from 'react';
 import { LayoutGrid, List, Plus, X } from 'lucide-react';
 
 const CMS_OPEN_KEY = 'projectsCmsOpen';
+const CMS_STATE_KEY = 'projectsCmsState';
 
 interface ViewSettingsProps {
   viewMode: 'grid' | 'list';
@@ -9,6 +10,8 @@ interface ViewSettingsProps {
   children?: React.ReactNode;
   cmsTitle?: string;
   cmsContent?: React.ReactNode;
+  cmsIsDirty?: boolean;
+  onCmsOpenChange?: (open: boolean) => void;
 }
 
 const ViewSettings: React.FC<ViewSettingsProps> = ({
@@ -17,6 +20,8 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
   children,
   cmsTitle,
   cmsContent,
+  cmsIsDirty,
+  onCmsOpenChange,
 }) => {
   const [isCmsOpen, setIsCmsOpen] = React.useState(() => {
     try {
@@ -35,15 +40,71 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
   }, [isCmsOpen]);
 
   React.useEffect(() => {
+    onCmsOpenChange?.(isCmsOpen);
+  }, [isCmsOpen, onCmsOpenChange]);
+
+  const [pendingDiscard, setPendingDiscard] = React.useState(false);
+  const noDiscardButtonRef = React.useRef<HTMLButtonElement | null>(null);
+
+  const discardAndClose = () => {
+    try {
+      localStorage.removeItem(CMS_STATE_KEY);
+    } catch {
+      // ignore
+    }
+    setPendingDiscard(false);
+    setIsCmsOpen(false);
+  };
+
+  const requestClose = () => {
+    if (cmsIsDirty) {
+      setPendingDiscard(true);
+      return;
+    }
+    setIsCmsOpen(false);
+  };
+
+  React.useEffect(() => {
     if (!isCmsOpen) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsCmsOpen(false);
+      if (e.key === 'Escape') requestClose();
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isCmsOpen]);
+
+  React.useEffect(() => {
+    if (!pendingDiscard) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingDiscard(false);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [pendingDiscard]);
+
+  React.useEffect(() => {
+    if (!pendingDiscard) return;
+    noDiscardButtonRef.current?.focus();
+  }, [pendingDiscard]);
+
+  React.useEffect(() => {
+    if (!isCmsOpen) return;
+    if (!cmsIsDirty) return;
+
+    // Browser reload/close cannot show a custom modal; this triggers the native confirm dialog.
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isCmsOpen, cmsIsDirty]);
 
   React.useEffect(() => {
     if (!isCmsOpen) return;
@@ -114,7 +175,7 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
           <button
             className="absolute inset-0 bg-black/40"
             aria-label="Close CMS"
-            onClick={() => setIsCmsOpen(false)}
+            onClick={requestClose}
             type="button"
           />
 
@@ -124,7 +185,7 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
               <button
                 type="button"
                 className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                onClick={() => setIsCmsOpen(false)}
+                onClick={requestClose}
                 aria-label="Close"
               >
                 <X size={22} className="text-slate-600 dark:text-slate-300" />
@@ -135,6 +196,42 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
               {cmsContent ?? (
                 <p className="text-sm">CMS UI MVP will live here next (Projects CRUD via tRPC).</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingDiscard && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Discard changes?">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            aria-label="Keep editing"
+            onClick={() => setPendingDiscard(false)}
+          />
+
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 shadow-xl p-5">
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Discard changes?</div>
+            <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              You have unsaved changes. Do you want to discard them?
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                ref={noDiscardButtonRef}
+                type="button"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
+                onClick={() => setPendingDiscard(false)}
+              >
+                No, keep editing
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                onClick={discardAndClose}
+              >
+                Yes, discard
+              </button>
             </div>
           </div>
         </div>
