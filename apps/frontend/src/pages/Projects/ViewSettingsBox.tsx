@@ -3,6 +3,7 @@ import { LayoutGrid, List, Plus, X } from 'lucide-react';
 
 const CMS_OPEN_KEY = 'projectsCmsOpen';
 const CMS_STATE_KEY = 'projectsCmsState';
+const CMS_RESET_ON_NEXT_OPEN_KEY = 'projectsCmsResetOnNextOpen';
 
 interface ViewSettingsProps {
   viewMode: 'grid' | 'list';
@@ -62,6 +63,19 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
       return;
     }
     setIsCmsOpen(false);
+  };
+
+  const openCms = () => {
+    try {
+      if (localStorage.getItem(CMS_RESET_ON_NEXT_OPEN_KEY) === '1') {
+        localStorage.removeItem(CMS_STATE_KEY);
+        localStorage.setItem(CMS_RESET_ON_NEXT_OPEN_KEY, '0');
+      }
+    } catch {
+      // ignore
+    }
+
+    setIsCmsOpen(true);
   };
 
   React.useEffect(() => {
@@ -157,7 +171,7 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
           <button
             type="button"
             className="flex items-center justify-center w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors duration-150"
-            onClick={() => setIsCmsOpen(true)}
+            onClick={openCms}
             aria-label="Open CMS"
           >
             <Plus size={28} className="text-gray-400 dark:text-gray-300" />
