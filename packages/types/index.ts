@@ -1,1 +1,1 @@
-export * from './projectSchema';
+export * from './projectSchema.js';
