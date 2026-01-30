@@ -2,6 +2,12 @@
     "name": "@portfolio/api",
     "private": true,
     "type": "module",
+    "exports": {
+        "./trpc": {
+            "types": "./src/trpc/contract.ts",
+            "default": "./src/trpc/contract.ts"
+        }
+    },
     "scripts": {
         "dev": "tsx watch src/index.ts"
     },
