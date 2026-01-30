@@ -15,4 +15,26 @@ export const ProjectSchema = z.object({
   featured: z.boolean().optional()
 });
 
+export const ProjectIdSchema = z.string().min(1);
+
+export const CreateProjectInputSchema = ProjectSchema.omit({ id: true });
+
+export const UpdateProjectInputSchema = z
+  .object({
+    id: ProjectIdSchema,
+    data: ProjectSchema.omit({ id: true }).partial(),
+  })
+  .refine((v) => Object.keys(v.data).length > 0, {
+    message: 'At least one field must be provided to update',
+    path: ['data'],
+  });
+
+export const DeleteProjectInputSchema = z.object({
+  id: ProjectIdSchema,
+});
+
 export type Project = z.infer<typeof ProjectSchema>;
+
+export type CreateProjectInput = z.infer<typeof CreateProjectInputSchema>;
+export type UpdateProjectInput = z.infer<typeof UpdateProjectInputSchema>;
+export type DeleteProjectInput = z.infer<typeof DeleteProjectInputSchema>;
