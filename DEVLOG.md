@@ -79,9 +79,9 @@ The UI is intentionally modern and clean:
 
 ### What’s next
 
-- [ ] Create a Postgres database to store projects metadata (and path to real image storage).
-- [ ] Define a Prisma schema for the project entries.
-- [ ] Create a custom CMS UI with drag-and-drop feature for images.
+- [x] Create a Postgres database to store projects metadata (and path to real image storage).
+- [ ] Define a Prisma schema for the project entries. (NOT NEEDED)
+- [x] Create a custom CMS UI with drag-and-drop feature for images.
 - [ ] Wire the contact form to a real delivery mechanism (email service/backend).
 - [ ] Improve accessibility and keyboard navigation across all interactive elements.
 
@@ -92,3 +92,103 @@ The UI is intentionally modern and clean:
 - Keep the “why” as visible as the “what”: the docs should reinforce professionalism.
 - Prefer evolving the schema + data layer first, then updating UI.
 - Avoid overengineering: this is a portfolio, but it should feel production-quality.
+
+---
+
+## 0.1.0-alpha (2026-01-30) — From static data to real content (DB + tRPC)
+
+### What I set out to fix
+
+The portfolio looked polished, but the data layer still smelled like a demo:
+
+- Projects were hardcoded and bundled into the frontend.
+- The “CMS” UI existed as a UX prototype, but didn’t represent the source of truth.
+
+The goal for today was to make Projects feel like real content:
+
+- **Read from a real database** (Postgres) in the actual user-facing views.
+- **Edit via a real API** (tRPC) from inside the existing Projects-page modal.
+- Keep the UI constraints that make the CMS feel product-grade (discard guards, route scoping, safe defaults).
+
+### Design approach: staged migration, not a big bang
+
+I intentionally migrated in steps to reduce risk and isolate issues:
+
+1) **Wire the tRPC client + React Query** first.
+2) Add a **temporary “connectivity status”** indicator so I can prove the frontend can reach the API before switching core UI.
+3) Switch the read paths:
+	 - landing “Featured Projects”
+	 - `/projects` page
+4) Only then switch the CMS list/editor to database-backed CRUD.
+
+This “prove the pipe works first” pattern prevents the most annoying failure mode: being unsure whether the bug is in UI logic, API routing, network, or types.
+
+### Why tRPC (and why schema-first still matters)
+
+The Projects feature benefits from end-to-end typing because it has lots of small moving parts:
+
+- tags/tools filters
+- optional fields (image/repo/live)
+- featured flag
+- create/update constraints
+
+Using **tRPC + shared Zod schemas** means:
+
+- The API contract is enforced at runtime and at compile-time.
+- The frontend can evolve forms safely without drifting from the backend.
+- The API can throw meaningful validation errors (e.g. missing required fields) that the UI can show without custom mapping glue.
+
+### Debugging note: “API is running” is not the same as “browser can call it”
+
+One of the early frictions was the CMS showing the API as offline while the server was clearly up on `localhost:3001`.
+
+Even for local dev, a browser request is still subject to cross-origin rules, preflight checks, and the exact URL used by the client.
+
+So part of making the system feel real was treating local networking like production:
+
+- the API explicitly enables CORS for dev origins
+- the client uses a single base URL (`VITE_API_BASE_URL` overrideable)
+
+This is one of those details that separates “it works on my machine” from “it’s reliably testable”.
+
+### Result: Projects now come from the database everywhere
+
+At the end of the iteration:
+
+- **Landing page Featured Projects** are loaded via `projects.list` and displayed from DB data.
+	- If any projects are marked `featured`, those are used.
+	- Otherwise a small fallback slice is shown so the section doesn’t look empty during early content entry.
+
+- **Projects page** grid/list + filtering are driven by DB data.
+	- Filter options are derived from the fetched projects.
+	- Loading and error states are explicit (no silent empties).
+
+- **CMS modal** now uses DB-backed `list/create/update/delete`.
+	- The list is the source of truth; no more local seed data.
+	- Mutations update the cached list so the UI stays responsive without full reloads.
+
+### UX guardrails I kept (because CMS needs to feel safe)
+
+The CMS is still intentionally an in-page modal inside `/projects`, and it keeps the “don’t lose my work” behavior:
+
+- Persist open/view/draft state across reloads (so accidental refresh doesn’t punish editing).
+- Protect against accidental loss via discard confirmation (with “No” as the safe default).
+- Close/reset behavior is scoped to the route (navigating away from `/projects` should not leave a CMS “hanging around”).
+
+### What’s next
+
+Now that the CMS edits real DB data, the next wins are about making it feel production-grade:
+
+- [ ] Add a dedicated `health/ping` API procedure (instead of using `projects.list` as the connectivity probe)
+- [ ] Improve error display for mutations (field-level where possible, toast/banner globally)
+  - [ ] Live URL and Repo URL fields should conduct checks to see if real URL (i.e. https//www.example.com)
+- [ ] Add image handling strategy (upload + storage)
+- [ ] Add authentication gates for CMS actions (even a lightweight first pass)
+- [ ] Deployment readiness: env config, database migrations workflow, and runtime logging
+
+__Later__
+- [ ] Add CMS UI to modify Skills & Expertise section on Homepage
+- [ ] Create a new page, _Technology_, where various software tools shown along with links to each tool
+- [ ] Create a new page, _Ideas_, where ideas can easily be unfolded and to keep all ideas in the same location
+- [ ] Add autocompletion in CMS UI (where applicable)
+- [ ] Check if Turborepo can be used to separate build of apps in monorepo and if Vite can still be used for the frontend
