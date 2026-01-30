@@ -2,6 +2,7 @@
     "name": "@portfolio/api",
     "private": true,
     "type": "module",
+    "types": "./src/trpc/contract.ts",
     "exports": {
         "./trpc": {
             "types": "./src/trpc/contract.ts",
@@ -13,6 +14,7 @@
     },
     "dependencies": {
         "@fastify/autoload": "^6.3.1",
+        "@fastify/cors": "^10.1.0",
         "@fastify/env": "^5.0.3",
         "@fastify/multipart": "^9.4.0",
         "@portfolio/db": "workspace:*",

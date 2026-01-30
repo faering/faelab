@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { ProjectSchema, type Project } from '../../../../../packages/types/projectSchema';
+import { trpc } from '../../trpc/trpc';
 
 const CMS_STATE_KEY = 'projectsCmsState';
 const CMS_PROJECTS_KEY = 'projectsCmsProjects';
@@ -166,6 +167,11 @@ function isDraftDifferent(a: ProjectDraft, b: ProjectDraft) {
 }
 
 export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProps) {
+  const trpcListQuery = trpc.projects.list.useQuery(undefined, {
+    retry: 0,
+    refetchOnWindowFocus: false,
+  });
+
   const [view, setView] = React.useState<ViewState>(() => {
     try {
       return safeParsePersistedState(localStorage.getItem(CMS_STATE_KEY))?.view ?? { kind: 'list' };
@@ -439,6 +445,25 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                 <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Projects</div>
                 <div className="text-sm text-slate-600 dark:text-slate-300">
                   Create and edit portfolio projects.
+                </div>
+
+                <div className="mt-2">
+                  {trpcListQuery.isLoading ? (
+                    <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 bg-white/60 dark:bg-gray-900/40">
+                      API: checking…
+                    </span>
+                  ) : trpcListQuery.isError ? (
+                    <span
+                      className="inline-flex items-center rounded-full border border-red-200 dark:border-red-900/50 px-2.5 py-1 text-xs text-red-700 dark:text-red-300 bg-red-50/60 dark:bg-red-950/10"
+                      title={trpcListQuery.error.message}
+                    >
+                      API: offline
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-900/40 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 dark:bg-emerald-950/10">
+                      API: connected ({trpcListQuery.data?.length ?? 0})
+                    </span>
+                  )}
                 </div>
               </div>
               <button
