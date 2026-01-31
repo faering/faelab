@@ -256,8 +256,8 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     onSuccess: (created) => {
       utils.projects.list.setData(undefined, (prev) => [created, ...(prev ?? [])]);
       setErrors({});
-      setDraft(projectToDraft(created));
-      setView({ kind: 'edit', id: created.id });
+      setDraft(emptyDraft());
+      setView({ kind: 'list' });
     },
   });
 
@@ -265,6 +265,8 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     onSuccess: (updated) => {
       utils.projects.list.setData(undefined, (prev) => (prev ?? []).map((p) => (p.id === updated.id ? updated : p)));
       setErrors({});
+      setDraft(emptyDraft());
+      setView({ kind: 'list' });
     },
   });
 
@@ -272,11 +274,8 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     onSuccess: (deleted) => {
       utils.projects.list.setData(undefined, (prev) => (prev ?? []).filter((p) => p.id !== deleted.id));
       setPendingDelete(null);
-
-      if (view.kind === 'edit' && view.id === deleted.id) {
-        setView({ kind: 'list' });
-        setDraft(emptyDraft());
-      }
+      setDraft(emptyDraft());
+      setView({ kind: 'list' });
     },
   });
 
