@@ -5,7 +5,7 @@ import ProjectList from './ProjectList';
 import ViewSettings from './ViewSettingsBox';
 import ProjectFilterDropdown from './ProjectFilterDropdown';
 import ProjectGrid from './ProjectGrid';
-import ProjectsCmsPopup from './ProjectsCmsPopup';
+import CmsProjectsSection from './CmsProjectsSection';
 import { trpc } from '../../trpc/trpc';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
@@ -103,7 +103,7 @@ const ProjectsPage: React.FC = () => {
           onCmsOpenChange={(open) => {
             if (!open) setCmsIsDirty(false);
           }}
-          cmsContent={<ProjectsCmsPopup onDirtyChange={setCmsIsDirty} />}
+          cmsContent={<CmsProjectsSection onDirtyChange={setCmsIsDirty} />}
         >
           <input
             value={searchTerm}

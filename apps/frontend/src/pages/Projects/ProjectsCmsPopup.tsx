@@ -1,4 +1,6 @@
-import React from 'react';
+export { default } from './CmsProjectsSection';
+export type { CmsProjectsSectionProps as ProjectsCmsPopupProps } from './CmsProjectsSection';
+/*
 import { Plus, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import type { Project } from '../../../../../packages/types/projectSchema';
 import { getApiBaseUrl } from '../../trpc/apiBase';
@@ -26,7 +28,6 @@ type ProjectDraft = {
 function toCommaSeparated(values: string[] | undefined) {
   return (values ?? []).join(', ');
 }
-
 function parseCommaSeparated(value: string) {
   return value
     .split(',')
@@ -133,6 +134,7 @@ function isDraftEmpty(draft: ProjectDraft) {
     draft.featured === false
   );
 }
+*/
 
 function isDraftDifferent(a: ProjectDraft, b: ProjectDraft) {
   return (
