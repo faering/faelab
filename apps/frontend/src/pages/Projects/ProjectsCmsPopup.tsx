@@ -205,6 +205,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
         credentials: 'include',
       });
       setAuthStatus({ state: 'unauthenticated' });
+      window.dispatchEvent(new Event('auth-updated'));
     } catch (err) {
       setAuthStatus({
         state: 'error',
@@ -238,6 +239,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
       const data = (await me.json()) as { authenticated: boolean; user?: { login: string } };
       if (data.authenticated && data.user?.login) {
         setAuthStatus({ state: 'authenticated', login: data.user.login });
+        window.dispatchEvent(new Event('auth-updated'));
       } else {
         setLocalError('Login failed');
       }

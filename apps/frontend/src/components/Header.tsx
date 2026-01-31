@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import Switcher from './Switcher';
 import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import { getApiBaseUrl } from '../trpc/apiBase';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -14,6 +15,9 @@ const navLinks = [
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'github' | 'local' | 'unknown'>('unknown');
+  const [authStatus, setAuthStatus] = useState<'checking' | 'authenticated' | 'unauthenticated' | 'error'>('checking');
+  const authRequestIdRef = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,6 +30,47 @@ const Header = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const apiBaseUrl = getApiBaseUrl();
+
+  const refreshAuth = () => {
+    const requestId = ++authRequestIdRef.current;
+    setAuthStatus('checking');
+
+    Promise.all([
+      fetch(`${apiBaseUrl}/auth/method`).then(async (res) => {
+        if (!res.ok) throw new Error('Failed to get auth method');
+        return (await res.json()) as { method?: 'github' | 'local' };
+      }),
+      fetch(`${apiBaseUrl}/auth/me`, { credentials: 'include' }).then(async (res) => {
+        if (!res.ok) return { authenticated: false } as { authenticated: boolean };
+        return (await res.json()) as { authenticated: boolean };
+      }),
+    ])
+      .then(([methodResult, meResult]) => {
+        if (authRequestIdRef.current !== requestId) return;
+        setAuthMethod(methodResult.method ?? 'github');
+        setAuthStatus(meResult.authenticated ? 'authenticated' : 'unauthenticated');
+      })
+      .catch(() => {
+        if (authRequestIdRef.current !== requestId) return;
+        setAuthStatus('error');
+      });
+  };
+
+  useEffect(() => {
+    refreshAuth();
+
+    const onFocus = () => refreshAuth();
+    const onAuthUpdated = () => refreshAuth();
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('auth-updated', onAuthUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('auth-updated', onAuthUpdated as EventListener);
+    };
+  }, [apiBaseUrl]);
 
   const scrollToSection = (sectionId: string) => {
     // If already on landing page, just scroll
@@ -46,6 +91,33 @@ const Header = () => {
       }, 100);
       setIsMenuOpen(false);
     }
+  };
+
+  const openCms = () => {
+    try {
+      localStorage.setItem('projectsCmsOpen', '1');
+      localStorage.setItem('projectsCmsResetOnNextOpen', '0');
+    } catch {
+      // ignore
+    }
+    navigate('/projects');
+  };
+
+  const handleLogin = () => {
+    if (authMethod === 'github') {
+      window.location.href = `${apiBaseUrl}/auth/github/login`;
+      return;
+    }
+    openCms();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${apiBaseUrl}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch {
+      // ignore
+    }
+    setAuthStatus('unauthenticated');
   };
 
   return (
@@ -140,6 +212,25 @@ const Header = () => {
                   )
                 );
               })()}
+              <div className="flex items-center gap-3">
+                {authStatus === 'authenticated' && (
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-purple-700 dark:text-purple-300 hover:underline"
+                    onClick={openCms}
+                  >
+                    Edit site
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:underline"
+                  onClick={authStatus === 'authenticated' ? handleLogout : handleLogin}
+                  disabled={authStatus === 'checking'}
+                >
+                  {authStatus === 'authenticated' ? 'Log out' : 'Login'}
+                </button>
+              </div>
             </div>
 
             {/* Mobile Menu Button */}
@@ -171,6 +262,35 @@ const Header = () => {
                   {item}
                 </Link>
               ))}
+              {authStatus === 'authenticated' && (
+                <button
+                  type="button"
+                  className="transition-colors duration-200 font-medium py-2 px-6 text-left"
+                  style={{ color: 'var(--tw-color-text)' }}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    openCms();
+                  }}
+                >
+                  Edit site
+                </button>
+              )}
+              <button
+                type="button"
+                className="transition-colors duration-200 font-medium py-2 px-6 text-left"
+                style={{ color: 'var(--tw-color-text)' }}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  if (authStatus === 'authenticated') {
+                    handleLogout();
+                  } else {
+                    handleLogin();
+                  }
+                }}
+                disabled={authStatus === 'checking'}
+              >
+                {authStatus === 'authenticated' ? 'Log out' : 'Login'}
+              </button>
             </div>
           </div>
         )}
