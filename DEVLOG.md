@@ -183,7 +183,7 @@ Now that the CMS edits real DB data, the next wins are about making it feel prod
 - [ ] Improve error display for mutations (field-level where possible, toast/banner globally)
   - [ ] Live URL and Repo URL fields should conduct checks to see if real URL (i.e. https//www.example.com)
 - [ ] Add image handling strategy (upload + storage)
-- [ ] Add authentication gates for CMS actions (even a lightweight first pass)
+- [x] Add authentication gates for CMS actions (even a lightweight first pass)
 - [ ] Deployment readiness: env config, database migrations workflow, and runtime logging
 
 ## 0.1.0 (31-01-2026) — Authentication
@@ -210,7 +210,28 @@ I decided to move ahead with a GitHub OAuth flow for the CMS, with a strict admi
 - Add `owner_id` to projects and scope CMS queries by owner.
 - Use OAuth to create/lookup users on first login.
 
-__Later__
+### Considerations made today (and why)
+
+I wanted a simple admin login now, with a clean path to GitHub OAuth later. That means the auth flow needs to be **switchable** via config rather than hardcoded.
+
+Key decisions:
+
+- **Auth method switch** (`AUTH_METHOD=local|github`) so I can use local admin credentials now and flip to OAuth later without rewiring the UI or API routes.
+- **Server-side sessions in the DB** (`auth_sessions`) so sessions survive restarts and work the same for local and OAuth auth.
+- **Users table as the source of truth**, even for local admin, so the data model is already shaped for multi-user portfolios.
+
+What changed in the product UX:
+
+- CMS now shows **local admin login** when `AUTH_METHOD=local`, otherwise GitHub login.
+- Added **search** to the CMS list.
+- Added **search + sort** to the public Projects page (Funnel icon with dropdown).
+
+Why this direction:
+
+- It keeps development fast (local admin) while making the eventual OAuth switch a configuration change, not a rewrite.
+- It aligns the data layer (users + sessions + owner_id) with the multi-user roadmap.
+
+__Future__
 - [ ] Add CMS UI to modify Skills & Expertise section on Homepage
 - [ ] Create a new page, _Technology_, where various software tools shown along with links to each tool
 - [ ] Create a new page, _Ideas_, where ideas can easily be unfolded and to keep all ideas in the same location
