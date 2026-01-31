@@ -1,5 +1,6 @@
 import React from 'react';
 import { Funnel, LayoutGrid, List, Plus, X } from 'lucide-react';
+import { getApiBaseUrl } from '../../trpc/apiBase';
 
 const CMS_OPEN_KEY = 'projectsCmsOpen';
 const CMS_STATE_KEY = 'projectsCmsState';
@@ -30,6 +31,8 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
 }) => {
   const [isSortMenuOpen, setIsSortMenuOpen] = React.useState(false);
   const sortMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const [canOpenCms, setCanOpenCms] = React.useState(false);
+  const apiBaseUrl = getApiBaseUrl();
   const [isCmsOpen, setIsCmsOpen] = React.useState(() => {
     try {
       return localStorage.getItem(CMS_OPEN_KEY) === '1';
@@ -45,6 +48,36 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
       // ignore (storage unavailable)
     }
   }, [isCmsOpen]);
+
+  React.useEffect(() => {
+    let active = true;
+
+    const refreshAuth = () => {
+      fetch(`${apiBaseUrl}/auth/me`, { credentials: 'include' })
+        .then(async (res) => {
+          if (!res.ok) return { authenticated: false } as { authenticated: boolean };
+          return (await res.json()) as { authenticated: boolean };
+        })
+        .then((data) => {
+          if (!active) return;
+          setCanOpenCms(data.authenticated);
+        })
+        .catch(() => {
+          if (!active) return;
+          setCanOpenCms(false);
+        });
+    };
+
+    refreshAuth();
+
+    const onAuthUpdated = () => refreshAuth();
+    window.addEventListener('auth-updated', onAuthUpdated as EventListener);
+
+    return () => {
+      active = false;
+      window.removeEventListener('auth-updated', onAuthUpdated as EventListener);
+    };
+  }, [apiBaseUrl]);
 
   React.useEffect(() => {
     const handleCmsOpen = () => {
@@ -254,14 +287,16 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
             </button>
           </div>
 
-          <button
-            type="button"
-            className="flex items-center justify-center w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors duration-150"
-            onClick={openCms}
-            aria-label="Open CMS"
-          >
-            <Plus size={28} className="text-gray-400 dark:text-gray-300" />
-          </button>
+          {canOpenCms && (
+            <button
+              type="button"
+              className="flex items-center justify-center w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors duration-150"
+              onClick={openCms}
+              aria-label="Open CMS"
+            >
+              <Plus size={28} className="text-gray-400 dark:text-gray-300" />
+            </button>
+          )}
         </div>
       </div>
 

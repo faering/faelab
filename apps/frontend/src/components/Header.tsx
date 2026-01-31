@@ -121,6 +121,7 @@ const Header = () => {
       // ignore
     }
     setAuthStatus('unauthenticated');
+    window.dispatchEvent(new Event('auth-updated'));
   };
 
   return (
