@@ -45,6 +45,7 @@ const ProjectsPage: React.FC = () => {
   // Filter state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [cmsIsDirty, setCmsIsDirty] = useState(false);
 
@@ -59,7 +60,13 @@ const ProjectsPage: React.FC = () => {
 
     const tagMatch = selectedTags.length === 0 || selectedTags.every((tag) => tags.includes(tag));
     const toolMatch = selectedTools.length === 0 || selectedTools.every((tool) => techStack.includes(tool));
-    return tagMatch && toolMatch;
+    const searchMatch = !searchTerm.trim()
+      ? true
+      : [project.title, project.description, ...tags, ...techStack]
+          .join(' ')
+          .toLowerCase()
+          .includes(searchTerm.trim().toLowerCase());
+    return tagMatch && toolMatch && searchMatch;
   });
 
   return (
@@ -78,6 +85,13 @@ const ProjectsPage: React.FC = () => {
           }}
           cmsContent={<ProjectsCmsPopup onDirtyChange={setCmsIsDirty} />}
         >
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white/80 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 text-sm"
+            placeholder="Search projects…"
+            aria-label="Search projects"
+          />
           <ProjectFilterDropdown
             label="Tags"
             options={tagOptions}
