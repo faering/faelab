@@ -1,8 +1,8 @@
 import React from 'react';
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
-import type { Project } from '../../../../../packages/types/projectSchema';
-import CmsUi from '../../components/CmsUi';
-import { trpc } from '../../trpc/trpc';
+import type { Project } from '../../../../../../packages/types/projectSchema';
+import CmsUi from '../../../components/CmsUi';
+import { trpc } from '../../../trpc/trpc';
 
 const CMS_STATE_KEY = 'projectsCmsState';
 

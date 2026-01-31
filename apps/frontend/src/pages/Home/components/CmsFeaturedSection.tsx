@@ -1,4 +1,4 @@
-import CmsUi from '../../components/CmsUi';
+import CmsUi from '../../../components/CmsUi';
 
 export type CmsFeaturedSectionProps = {
   onDirtyChange?: (dirty: boolean) => void;

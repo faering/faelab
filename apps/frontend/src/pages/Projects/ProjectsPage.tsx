@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import type { Project } from '../../../../../packages/types/projectSchema';
-import ProjectList from './ProjectList';
-import ViewSettings from './ViewSettingsBox';
-import ProjectFilterDropdown from './ProjectFilterDropdown';
-import ProjectGrid from './ProjectGrid';
-import CmsProjectsSection from './CmsProjectsSection';
+import ProjectList from './components/ProjectList';
+import ViewSettings from './components/ViewSettingsBox';
+import ProjectFilterDropdown from './components/ProjectFilterDropdown';
+import ProjectGrid from './components/ProjectGrid';
+import CmsProjectsSection from './components/CmsProjectsSection';
 import { trpc } from '../../trpc/trpc';
 
 const VIEW_MODE_KEY = 'projectsViewMode';

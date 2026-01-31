@@ -1,6 +1,6 @@
 import React from 'react';
 import { Funnel, LayoutGrid, List, Plus, X } from 'lucide-react';
-import { getApiBaseUrl } from '../../trpc/apiBase';
+import { getApiBaseUrl } from '../../../trpc/apiBase';
 
 const CMS_OPEN_KEY = 'projectsCmsOpen';
 const CMS_STATE_KEY = 'projectsCmsState';
