@@ -10,12 +10,14 @@ This is a modern, responsive portfolio website built with Vite, React, TypeScrip
 ## Installation
 
 1. **Clone the repository:**
+
 	```sh
 	git clone https://github.com/faering/portfolio-website.git
 	cd portfolio-website
 	```
 
 2. **Install dependencies:**
+
 	```sh
 	pnpm install
 	```

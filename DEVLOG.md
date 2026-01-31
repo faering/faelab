@@ -231,9 +231,10 @@ Why this direction:
 - It keeps development fast (local admin) while making the eventual OAuth switch a configuration change, not a rewrite.
 - It aligns the data layer (users + sessions + owner_id) with the multi-user roadmap.
 
-__Future__
+## Future
+
 - [ ] Add CMS UI to modify Skills & Expertise section on Homepage
-- [ ] Create a new page, _Technology_, where various software tools shown along with links to each tool
-- [ ] Create a new page, _Ideas_, where ideas can easily be unfolded and to keep all ideas in the same location
+- [ ] Create a new page, *Technology*, where various software tools shown along with links to each tool
+- [ ] Create a new page, *Ideas*, where ideas can easily be unfolded and to keep all ideas in the same location
 - [ ] Add autocompletion in CMS UI (where applicable)
 - [ ] Check if Turborepo can be used to separate build of apps in monorepo and if Vite can still be used for the frontend
