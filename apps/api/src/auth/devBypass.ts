@@ -13,6 +13,7 @@ export function getDevSession(): AdminSession {
   const now = Date.now();
   return {
     id: 'dev-bypass',
+    userId: 'dev-bypass',
     githubId: 0,
     login,
     createdAt: now,

@@ -1,5 +1,6 @@
 export type AdminSession = {
   id: string;
+  userId: string;
   githubId: number;
   login: string;
   createdAt: number;
@@ -12,10 +13,11 @@ function now() {
   return Date.now();
 }
 
-export function createSession(user: { id: number; login: string }, ttlMs: number): AdminSession {
+export function createSession(user: { userId: string; githubId: number; login: string }, ttlMs: number): AdminSession {
   const session: AdminSession = {
     id: crypto.randomUUID(),
-    githubId: user.id,
+    userId: user.userId,
+    githubId: user.githubId,
     login: user.login,
     createdAt: now(),
     expiresAt: now() + ttlMs,

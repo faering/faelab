@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { getDevSession, isDevBypassEnabled } from './devBypass.js';
 import { createSession, deleteSession, getSession } from './sessionStore.js';
+import { upsertUserFromGitHub } from './userStore.js';
 
 const SESSION_COOKIE = 'admin_session';
 const STATE_COOKIE = 'oauth_state';
@@ -84,7 +85,7 @@ async function fetchGitHubUser(accessToken: string) {
     throw new Error(`GitHub user fetch failed: ${response.status}`);
   }
 
-  const user = (await response.json()) as { id: number; login: string };
+  const user = (await response.json()) as { id: number; login: string; name?: string | null };
   if (!user?.id || !user?.login) throw new Error('Invalid GitHub user response');
   return user;
 }
@@ -136,7 +137,20 @@ export async function registerAuthRoutes(app: FastifyInstance) {
           return;
         }
 
-        const session = createSession(user, getSessionTtlMs());
+        const dbUser = await upsertUserFromGitHub({
+          githubId: user.id,
+          githubLogin: user.login,
+          displayName: user.name ?? null,
+        });
+
+        const session = createSession(
+          {
+            userId: dbUser.id,
+            githubId: user.id,
+            login: user.login,
+          },
+          getSessionTtlMs(),
+        );
         reply.clearCookie(STATE_COOKIE, getCookieOptions());
         reply.setCookie(SESSION_COOKIE, session.id, {
           ...getCookieOptions(),
