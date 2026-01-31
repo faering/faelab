@@ -39,3 +39,81 @@ ALTER TABLE projects
 CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON auth_sessions(expires_at);
+
+-- Site profile (singleton per owner) for homepage content
+CREATE TABLE IF NOT EXISTS site_profile (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    hero_name TEXT NOT NULL,
+    hero_title TEXT NOT NULL,
+    hero_bio TEXT NOT NULL,
+    about_left_headline TEXT NOT NULL,
+    about_right_icon TEXT NOT NULL,
+    about_right_title TEXT NOT NULL,
+    about_right_description TEXT NOT NULL,
+    skills_intro TEXT NOT NULL,
+    contact_title TEXT NOT NULL,
+    contact_subtitle TEXT NOT NULL,
+    contact_email TEXT NOT NULL,
+    contact_phone TEXT NOT NULL,
+    contact_location TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (owner_id)
+);
+
+CREATE TABLE IF NOT EXISTS about_paragraphs (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    profile_id TEXT NOT NULL REFERENCES site_profile(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    body TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS about_badges (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    profile_id TEXT NOT NULL REFERENCES site_profile(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    label TEXT NOT NULL,
+    color TEXT
+);
+
+CREATE TABLE IF NOT EXISTS skill_categories (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    profile_id TEXT NOT NULL REFERENCES site_profile(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS skill_items (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category_id TEXT NOT NULL REFERENCES skill_categories(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    label TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS skill_technologies (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    profile_id TEXT NOT NULL REFERENCES site_profile(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    label TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS featured_projects (
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    PRIMARY KEY (owner_id, project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_profile_owner_id ON site_profile(owner_id);
+CREATE INDEX IF NOT EXISTS idx_about_paragraphs_profile_id ON about_paragraphs(profile_id);
+CREATE INDEX IF NOT EXISTS idx_about_badges_profile_id ON about_badges(profile_id);
+CREATE INDEX IF NOT EXISTS idx_skill_categories_profile_id ON skill_categories(profile_id);
+CREATE INDEX IF NOT EXISTS idx_skill_items_category_id ON skill_items(category_id);
+CREATE INDEX IF NOT EXISTS idx_skill_technologies_profile_id ON skill_technologies(profile_id);
+CREATE INDEX IF NOT EXISTS idx_featured_projects_owner_id ON featured_projects(owner_id);
