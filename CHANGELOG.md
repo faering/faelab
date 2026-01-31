@@ -6,7 +6,27 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
-- Add more real project entries and replace placeholder project data.
+### Added
+
+- tRPC client integration with React Query and API connectivity checks in the CMS.
+- GitHub OAuth admin login (server-side sessions) with optional dev bypass.
+- Configurable auth method (`AUTH_METHOD=local|github`) and local admin login flow.
+- Database-backed users and sessions tables for future multi-user support.
+- Projects CMS now uses database-backed CRUD via tRPC.
+- CMS search bar for quick project filtering.
+- Projects page search + sort (Funnel dropdown).
+
+### Changed
+
+- Featured and Projects pages now load projects from the database (tRPC) instead of local static data.
+- CMS save/delete now return to the list view by default.
+
+### Fixed
+
+- CORS + cookie handling for browser-based API requests.
+
+### Remaining
+
 - Wire up the contact form to a real delivery mechanism (email service / backend).
 - Improve accessibility and keyboard navigation across interactive controls.
 
