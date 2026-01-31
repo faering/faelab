@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 
 import { registerApis } from './registerApis.js';
 
@@ -7,6 +8,7 @@ export function createServer() {
   const app = Fastify({ logger: true });
 
   app.register(cors, {
+    credentials: true,
     origin: (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => {
       if (!origin) {
         cb(null, true);
@@ -35,6 +37,10 @@ export function createServer() {
         cb(null, false);
       }
     },
+  });
+
+  app.register(cookie, {
+    secret: process.env.AUTH_SESSION_SECRET ?? 'dev-secret',
   });
 
   // Register API protocols (tRPC now; REST/GraphQL later)

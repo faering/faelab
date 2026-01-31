@@ -1,8 +1,14 @@
+import '@fastify/cookie';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
+import { getSession } from '../auth/sessionStore.js';
 
 export async function createTRPCContext({ req }: CreateFastifyContextOptions) {
+  const sessionId = req.cookies?.admin_session;
+  const session = getSession(sessionId);
   return {
-    req
+    req,
+    session,
+    isAdmin: Boolean(session),
   };
 }
 

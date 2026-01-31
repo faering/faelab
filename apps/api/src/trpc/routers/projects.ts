@@ -12,14 +12,14 @@ import {
   listProjects,
   updateProject,
 } from '../../modules/projects/service.js';
-import { publicProcedure, router } from '../init.js';
+import { adminProcedure, publicProcedure, router } from '../init.js';
 
 export const projectsRouter = router({
   list: publicProcedure.output(ProjectSchema.array()).query(async () => {
     return listProjects();
   }),
 
-  create: publicProcedure
+  create: adminProcedure
     .input(CreateProjectInputSchema)
     .output(ProjectSchema)
     .mutation(async ({ input }) => {
@@ -33,7 +33,7 @@ export const projectsRouter = router({
       }
     }),
 
-  update: publicProcedure
+  update: adminProcedure
     .input(UpdateProjectInputSchema)
     .output(ProjectSchema)
     .mutation(async ({ input }) => {
@@ -42,7 +42,7 @@ export const projectsRouter = router({
       return updated;
     }),
 
-  delete: publicProcedure
+  delete: adminProcedure
     .input(DeleteProjectInputSchema)
     .output(DeleteProjectInputSchema)
     .mutation(async ({ input }) => {

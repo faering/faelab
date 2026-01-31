@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import type { Project } from '../../../../../packages/types/projectSchema';
+import { getApiBaseUrl } from '../../trpc/apiBase';
 import { trpc } from '../../trpc/trpc';
 
 const CMS_STATE_KEY = 'projectsCmsState';
@@ -147,6 +148,60 @@ function isDraftDifferent(a: ProjectDraft, b: ProjectDraft) {
 }
 
 export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProps) {
+  const apiBaseUrl = getApiBaseUrl();
+  const [authStatus, setAuthStatus] = React.useState<
+    | { state: 'checking' }
+    | { state: 'authenticated'; login: string }
+    | { state: 'unauthenticated' }
+    | { state: 'error'; message: string }
+  >({ state: 'checking' });
+
+  React.useEffect(() => {
+    let active = true;
+    setAuthStatus({ state: 'checking' });
+
+    fetch(`${apiBaseUrl}/auth/me`, { credentials: 'include' })
+      .then(async (res) => {
+        if (!active) return;
+        if (!res.ok) {
+          setAuthStatus({ state: 'unauthenticated' });
+          return;
+        }
+        const data = (await res.json()) as { authenticated: boolean; user?: { login: string } };
+        if (data.authenticated && data.user?.login) {
+          setAuthStatus({ state: 'authenticated', login: data.user.login });
+        } else {
+          setAuthStatus({ state: 'unauthenticated' });
+        }
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setAuthStatus({
+          state: 'error',
+          message: err instanceof Error ? err.message : 'Failed to check auth',
+        });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [apiBaseUrl]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${apiBaseUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      setAuthStatus({ state: 'unauthenticated' });
+    } catch (err) {
+      setAuthStatus({
+        state: 'error',
+        message: err instanceof Error ? err.message : 'Failed to log out',
+      });
+    }
+  };
+
   const trpcListQuery = trpc.projects.list.useQuery(undefined, {
     retry: 0,
     refetchOnWindowFocus: false,
@@ -411,7 +466,35 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
       </aside>
 
       <main className="flex-1 overflow-auto p-5">
-        {view.kind === 'list' ? (
+        {authStatus.state !== 'authenticated' ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6 text-center">
+              <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Admin access required</div>
+              <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Sign in with GitHub to manage projects in the CMS.
+              </div>
+
+              {authStatus.state === 'checking' && (
+                <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">Checking session…</div>
+              )}
+
+              {authStatus.state === 'error' && (
+                <div className="mt-4 text-sm text-red-600 dark:text-red-300">
+                  {authStatus.message}
+                </div>
+              )}
+
+              {authStatus.state !== 'checking' && (
+                <a
+                  href={`${apiBaseUrl}/auth/github/login`}
+                  className="mt-5 inline-flex items-center justify-center rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition-colors"
+                >
+                  Login with GitHub
+                </a>
+              )}
+            </div>
+          </div>
+        ) : view.kind === 'list' ? (
           <>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -447,6 +530,19 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
               >
                 <Plus size={18} />
                 New
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Signed in as <span className="font-medium">{authStatus.login}</span>
+              </div>
+              <button
+                type="button"
+                className="text-xs text-slate-600 dark:text-slate-300 hover:underline"
+                onClick={handleLogout}
+              >
+                Log out
               </button>
             </div>
 

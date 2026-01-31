@@ -1,10 +1,10 @@
 import './env';
 
-import { createServer } from './server/createServer';
+import { createServer } from './server/createServer.js';
 
 const app = createServer();
 
-app.listen({ port: 3001, host: '0.0.0.0' }, (err) => {
+app.listen({ port: 3001, host: '0.0.0.0' }, (err: Error | null) => {
   if (err) {
     app.log.error(err);
     process.exit(1);
