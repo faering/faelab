@@ -47,6 +47,15 @@ const ViewSettings: React.FC<ViewSettingsProps> = ({
   }, [isCmsOpen]);
 
   React.useEffect(() => {
+    const handleCmsOpen = () => {
+      setIsCmsOpen(true);
+    };
+
+    window.addEventListener('cms-open', handleCmsOpen as EventListener);
+    return () => window.removeEventListener('cms-open', handleCmsOpen as EventListener);
+  }, []);
+
+  React.useEffect(() => {
     onCmsOpenChange?.(isCmsOpen);
   }, [isCmsOpen, onCmsOpenChange]);
 

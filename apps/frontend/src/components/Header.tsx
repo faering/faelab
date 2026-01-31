@@ -100,7 +100,10 @@ const Header = () => {
     } catch {
       // ignore
     }
-    navigate('/projects');
+    window.dispatchEvent(new Event('cms-open'));
+    if (location.pathname !== '/projects') {
+      navigate('/projects');
+    }
   };
 
   const handleLogin = () => {
