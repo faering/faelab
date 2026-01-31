@@ -1,17 +1,22 @@
 {
     "name": "portfolio",
     "private": true,
-    "version": "0.1.0-alpha",
+    "version": "0.1.0",
     "type": "module",
     "packageManager": "pnpm@9.15.1",
     "scripts": {
-        "dev": "pnpm --filter ./apps/api --filter ./apps/frontend --parallel dev",
-        "build": "pnpm --filter ./apps/frontend build",
-        "lint": "pnpm --filter ./apps/frontend lint",
+        "dev": "pnpm -r --parallel --if-present dev",
+        "build": "pnpm -r --if-present build",
+        "lint": "pnpm -r --if-present lint",
         "preview": "pnpm --filter ./apps/frontend preview",
         "api:dev": "pnpm --filter ./apps/api dev",
+        "api:build": "pnpm --filter ./apps/api build",
+        "api:lint": "pnpm --filter ./apps/api lint",
         "frontend:dev": "pnpm --filter ./apps/frontend dev",
         "frontend:build": "pnpm --filter ./apps/frontend build",
-        "frontend:lint": "pnpm --filter ./apps/frontend lint"
+        "frontend:lint": "pnpm --filter ./apps/frontend lint",
+        "dev:all": "pnpm -r --parallel --if-present dev",
+        "build:all": "pnpm -r --if-present build",
+        "lint:all": "pnpm -r --if-present lint"
     }
 }
