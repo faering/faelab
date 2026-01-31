@@ -5,7 +5,7 @@ import { getSession } from '../auth/sessionStore.js';
 
 export async function createTRPCContext({ req }: CreateFastifyContextOptions) {
   const sessionId = req.cookies?.admin_session;
-  const session = isDevBypassEnabled() ? getDevSession() : getSession(sessionId);
+  const session = isDevBypassEnabled() ? getDevSession() : await getSession(sessionId);
   return {
     req,
     session,

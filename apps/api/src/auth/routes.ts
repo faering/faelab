@@ -143,7 +143,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
           displayName: user.name ?? null,
         });
 
-        const session = createSession(
+        const session = await createSession(
           {
             userId: dbUser.id,
             githubId: user.id,
@@ -180,7 +180,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const sessionId = req.cookies?.[SESSION_COOKIE];
-    const session = getSession(sessionId);
+    const session = await getSession(sessionId);
 
     if (!session) {
       reply.code(401).send({ authenticated: false });
@@ -203,7 +203,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const sessionId = req.cookies?.[SESSION_COOKIE];
-    deleteSession(sessionId);
+    await deleteSession(sessionId);
     reply.clearCookie(SESSION_COOKIE, getCookieOptions());
     reply.send({ ok: true });
   });
