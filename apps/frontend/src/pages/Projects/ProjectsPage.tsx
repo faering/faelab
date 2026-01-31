@@ -11,6 +11,7 @@ import { trpc } from '../../trpc/trpc';
 const VIEW_MODE_KEY = 'projectsViewMode';
 
 type ViewMode = 'grid' | 'list';
+type SortMode = 'featured' | 'title';
 
 // Extract unique tags and tools from projects
 const getUnique = (arr: Project[], key: 'tags' | 'techStack') =>
@@ -46,6 +47,7 @@ const ProjectsPage: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('featured');
 
   const [cmsIsDirty, setCmsIsDirty] = useState(false);
 
@@ -69,6 +71,22 @@ const ProjectsPage: React.FC = () => {
     return tagMatch && toolMatch && searchMatch;
   });
 
+  const sortedProjects = React.useMemo(() => {
+    const next = [...filteredProjects];
+    if (sortMode === 'title') {
+      next.sort((a, b) => a.title.localeCompare(b.title));
+      return next;
+    }
+
+    next.sort((a, b) => {
+      const featuredA = a.featured ? 1 : 0;
+      const featuredB = b.featured ? 1 : 0;
+      if (featuredA !== featuredB) return featuredB - featuredA;
+      return a.title.localeCompare(b.title);
+    });
+    return next;
+  }, [filteredProjects, sortMode]);
+
   return (
     <section className="min-h-screen flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-rose-200 via-purple-200 to-indigo-200 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"></div>
@@ -78,6 +96,8 @@ const ProjectsPage: React.FC = () => {
         <ViewSettings
           viewMode={viewMode}
           setViewMode={setViewMode}
+          sortMode={sortMode}
+          onSortModeChange={setSortMode}
           cmsTitle="Projects CMS"
           cmsIsDirty={cmsIsDirty}
           onCmsOpenChange={(open) => {
@@ -126,15 +146,15 @@ const ProjectsPage: React.FC = () => {
                 {projectsQuery.error instanceof Error ? projectsQuery.error.message : 'Unknown error'}
               </span>
             </div>
-          ) : filteredProjects.length === 0 ? (
+          ) : sortedProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-400">
               <span className="text-lg font-semibold">No projects found.</span>
               <span className="text-sm mt-2">Try adjusting your filters.</span>
             </div>
           ) : viewMode === 'grid' ? (
-            <ProjectGrid projects={filteredProjects} />
+            <ProjectGrid projects={sortedProjects} />
           ) : (
-            <ProjectList projects={filteredProjects} />
+            <ProjectList projects={sortedProjects} />
           )}
         </div>
       </div>
