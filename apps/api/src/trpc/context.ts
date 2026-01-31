@@ -1,10 +1,11 @@
 import '@fastify/cookie';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
+import { getDevSession, isDevBypassEnabled } from '../auth/devBypass.js';
 import { getSession } from '../auth/sessionStore.js';
 
 export async function createTRPCContext({ req }: CreateFastifyContextOptions) {
   const sessionId = req.cookies?.admin_session;
-  const session = getSession(sessionId);
+  const session = isDevBypassEnabled() ? getDevSession() : getSession(sessionId);
   return {
     req,
     session,

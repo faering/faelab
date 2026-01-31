@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 
 import { registerApis } from './registerApis.js';
+import { isDevBypassEnabled } from '../auth/devBypass.js';
 
 export function createServer() {
   const app = Fastify({ logger: true });
@@ -42,6 +43,10 @@ export function createServer() {
   app.register(cookie, {
     secret: process.env.AUTH_SESSION_SECRET ?? 'dev-secret',
   });
+
+  if (isDevBypassEnabled()) {
+    app.log.warn('AUTH_DEV_BYPASS is enabled (development only). OAuth is bypassed for CMS access.');
+  }
 
   // Register API protocols (tRPC now; REST/GraphQL later)
   app.register(async (instance) => {

@@ -1,6 +1,7 @@
 import '@fastify/cookie';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
+import { getDevSession, isDevBypassEnabled } from './devBypass.js';
 import { createSession, deleteSession, getSession } from './sessionStore.js';
 
 const SESSION_COOKIE = 'admin_session';
@@ -151,6 +152,19 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   );
 
   app.get('/auth/me', async (req, reply) => {
+    if (isDevBypassEnabled()) {
+      const session = getDevSession();
+      reply.send({
+        authenticated: true,
+        user: {
+          login: session.login,
+          id: session.githubId,
+        },
+        bypass: true,
+      });
+      return;
+    }
+
     const sessionId = req.cookies?.[SESSION_COOKIE];
     const session = getSession(sessionId);
 
@@ -169,6 +183,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post('/auth/logout', async (req, reply) => {
+    if (isDevBypassEnabled()) {
+      reply.send({ ok: true, bypass: true });
+      return;
+    }
+
     const sessionId = req.cookies?.[SESSION_COOKIE];
     deleteSession(sessionId);
     reply.clearCookie(SESSION_COOKIE, getCookieOptions());
