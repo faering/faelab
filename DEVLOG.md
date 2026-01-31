@@ -6,7 +6,7 @@ The goal here is different from `CHANGELOG.md`: it’s meant to show decision-ma
 
 ---
 
-## 0.1.0-alpha (2026-01-24) — Establishing the foundation
+## 0.1.0-alpha (24-01-2026) — Establishing the foundation
 
 ### What I set out to build
 
@@ -95,7 +95,7 @@ The UI is intentionally modern and clean:
 
 ---
 
-## 0.1.0-alpha (2026-01-30) — From static data to real content (DB + tRPC)
+## 0.1.0 (30-01-2026) — From static data to real content (DB + tRPC)
 
 ### What I set out to fix
 
@@ -185,6 +185,30 @@ Now that the CMS edits real DB data, the next wins are about making it feel prod
 - [ ] Add image handling strategy (upload + storage)
 - [ ] Add authentication gates for CMS actions (even a lightweight first pass)
 - [ ] Deployment readiness: env config, database migrations workflow, and runtime logging
+
+## 0.1.0 (31-01-2026) — Authentication
+
+### Auth plan (admin-only, GitHub OAuth)
+
+I decided to move ahead with a GitHub OAuth flow for the CMS, with a strict admin allowlist and a development-only bypass flag.
+
+**Short-term (admin-only):**
+
+- GitHub OAuth App with callback to the API (`/auth/github/callback`).
+- Admin allowlist by GitHub login or ID in env.
+- Server-side sessions (HttpOnly cookie), checked by tRPC context.
+- CMS UI gated by `/auth/me`.
+
+**Developer ergonomics:**
+
+- `AUTH_DEV_BYPASS=true` for local development (never in production).
+- Emits a startup warning when bypass is enabled.
+
+**Longer-term path:**
+
+- Replace admin allowlist with a users table.
+- Add `owner_id` to projects and scope CMS queries by owner.
+- Use OAuth to create/lookup users on first login.
 
 __Later__
 - [ ] Add CMS UI to modify Skills & Expertise section on Homepage
