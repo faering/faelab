@@ -139,10 +139,9 @@ const Header = () => {
             </Link>
 
             {/* Desktop Navigation with Switcher */}
-            <div className="hidden md:flex items-center space-x-8">
-              {/* Switcher aligned with buttons */}
-              <Switcher />
+            <div className="hidden md:flex flex-1 items-center justify-center">
               {/* Menu buttons */}
+              <div className="flex items-center space-x-8">
               {(() => {
                 // Dropdown open state for Projects menu
                 const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -212,6 +211,11 @@ const Header = () => {
                   )
                 );
               })()}
+              </div>
+            </div>
+
+            <div className="hidden md:flex items-center gap-3">
+              <Switcher />
               <div className="flex items-center gap-3">
                 {authStatus === 'authenticated' && (
                   <button
