@@ -159,6 +159,7 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
   const [localUsername, setLocalUsername] = React.useState('');
   const [localPassword, setLocalPassword] = React.useState('');
   const [localError, setLocalError] = React.useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   React.useEffect(() => {
     let active = true;
@@ -463,6 +464,24 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     }
   };
 
+  const filteredProjects = React.useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return projects;
+
+    return projects.filter((project) => {
+      const haystack = [
+        project.title,
+        project.description,
+        ...(project.tags ?? []),
+        ...(project.techStack ?? []),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(term);
+    });
+  }, [projects, searchTerm]);
+
   return (
     <div className="relative flex h-[70vh] min-h-[420px] w-full overflow-hidden">
       <aside
@@ -604,9 +623,18 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
               </button>
             </div>
 
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-slate-500 dark:text-slate-400">
                 Signed in as <span className="font-medium">{authStatus.login}</span>
+              </div>
+              <div className="w-full sm:w-64">
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 text-slate-900 dark:text-slate-100 text-sm"
+                  placeholder="Search projects…"
+                  aria-label="Search projects"
+                />
               </div>
               <button
                 type="button"
@@ -642,13 +670,15 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                 <div className="px-4 py-10 text-sm text-red-700 dark:text-red-300">
                   Could not load projects: {trpcListQuery.error.message}
                 </div>
-              ) : projects.length === 0 ? (
+              ) : filteredProjects.length === 0 ? (
                 <div className="px-4 py-10 text-sm text-slate-600 dark:text-slate-300">
-                  No projects in the database yet.
+                  {projects.length === 0
+                    ? 'No projects in the database yet.'
+                    : 'No projects match your search.'}
                 </div>
               ) : (
                 <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {projects.map((p) => (
+                  {filteredProjects.map((p) => (
                     <div key={p.id} className="grid grid-cols-12 gap-3 px-4 py-3 items-center bg-white dark:bg-gray-900">
                       <div className="col-span-6">
                         <div className="font-medium text-slate-900 dark:text-slate-100">{p.title}</div>
