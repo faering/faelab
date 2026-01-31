@@ -155,21 +155,31 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
     | { state: 'unauthenticated' }
     | { state: 'error'; message: string }
   >({ state: 'checking' });
+  const [authMethod, setAuthMethod] = React.useState<'github' | 'local' | 'unknown'>('unknown');
+  const [localUsername, setLocalUsername] = React.useState('');
+  const [localPassword, setLocalPassword] = React.useState('');
+  const [localError, setLocalError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let active = true;
     setAuthStatus({ state: 'checking' });
+    setLocalError(null);
 
-    fetch(`${apiBaseUrl}/auth/me`, { credentials: 'include' })
-      .then(async (res) => {
+    Promise.all([
+      fetch(`${apiBaseUrl}/auth/method`).then(async (res) => {
+        if (!res.ok) throw new Error('Failed to get auth method');
+        return (await res.json()) as { method?: 'github' | 'local' };
+      }),
+      fetch(`${apiBaseUrl}/auth/me`, { credentials: 'include' }).then(async (res) => {
+        if (!res.ok) return { authenticated: false } as { authenticated: boolean; user?: { login: string } };
+        return (await res.json()) as { authenticated: boolean; user?: { login: string } };
+      }),
+    ])
+      .then(([methodResult, meResult]) => {
         if (!active) return;
-        if (!res.ok) {
-          setAuthStatus({ state: 'unauthenticated' });
-          return;
-        }
-        const data = (await res.json()) as { authenticated: boolean; user?: { login: string } };
-        if (data.authenticated && data.user?.login) {
-          setAuthStatus({ state: 'authenticated', login: data.user.login });
+        setAuthMethod(methodResult.method ?? 'github');
+        if (meResult.authenticated && meResult.user?.login) {
+          setAuthStatus({ state: 'authenticated', login: meResult.user.login });
         } else {
           setAuthStatus({ state: 'unauthenticated' });
         }
@@ -199,6 +209,39 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
         state: 'error',
         message: err instanceof Error ? err.message : 'Failed to log out',
       });
+    }
+  };
+
+  const handleLocalLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLocalError(null);
+    try {
+      const res = await fetch(`${apiBaseUrl}/auth/local/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: localUsername, password: localPassword }),
+      });
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string };
+        setLocalError(payload.error ?? 'Login failed');
+        return;
+      }
+
+      const me = await fetch(`${apiBaseUrl}/auth/me`, { credentials: 'include' });
+      if (!me.ok) {
+        setLocalError('Login failed');
+        return;
+      }
+      const data = (await me.json()) as { authenticated: boolean; user?: { login: string } };
+      if (data.authenticated && data.user?.login) {
+        setAuthStatus({ state: 'authenticated', login: data.user.login });
+      } else {
+        setLocalError('Login failed');
+      }
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Login failed');
     }
   };
 
@@ -471,7 +514,9 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
             <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6 text-center">
               <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Admin access required</div>
               <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                Sign in with GitHub to manage projects in the CMS.
+                {authMethod === 'local'
+                  ? 'Enter your admin credentials to manage projects.'
+                  : 'Sign in with GitHub to manage projects in the CMS.'}
               </div>
 
               {authStatus.state === 'checking' && (
@@ -484,13 +529,40 @@ export default function ProjectsCmsPopup({ onDirtyChange }: ProjectsCmsPopupProp
                 </div>
               )}
 
-              {authStatus.state !== 'checking' && (
+              {authStatus.state !== 'checking' && authMethod === 'github' && (
                 <a
                   href={`${apiBaseUrl}/auth/github/login`}
                   className="mt-5 inline-flex items-center justify-center rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition-colors"
                 >
                   Login with GitHub
                 </a>
+              )}
+
+              {authStatus.state !== 'checking' && authMethod === 'local' && (
+                <form className="mt-5 grid gap-3" onSubmit={handleLocalLogin}>
+                  <input
+                    value={localUsername}
+                    onChange={(e) => setLocalUsername(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 text-slate-900 dark:text-slate-100"
+                    placeholder="Admin username"
+                  />
+                  <input
+                    type="password"
+                    value={localPassword}
+                    onChange={(e) => setLocalPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 text-slate-900 dark:text-slate-100"
+                    placeholder="Admin password"
+                  />
+                  {localError && (
+                    <div className="text-sm text-red-600 dark:text-red-300">{localError}</div>
+                  )}
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition-colors"
+                  >
+                    Sign in
+                  </button>
+                </form>
               )}
             </div>
           </div>

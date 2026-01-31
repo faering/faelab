@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { getDevSession, isDevBypassEnabled } from './devBypass.js';
 import { createSession, deleteSession, getSession } from './sessionStore.js';
-import { upsertUserFromGitHub } from './userStore.js';
+import { upsertLocalAdmin, upsertUserFromGitHub } from './userStore.js';
 
 const SESSION_COOKIE = 'admin_session';
 const STATE_COOKIE = 'oauth_state';
@@ -11,6 +11,13 @@ const STATE_COOKIE = 'oauth_state';
 const DEFAULT_SUCCESS_REDIRECT = 'http://localhost:5173/projects';
 const DEFAULT_FAILURE_REDIRECT = 'http://localhost:5173/projects?auth=failed';
 const DEFAULT_CALLBACK_URL = 'http://localhost:3001/auth/github/callback';
+
+type AuthMethod = 'github' | 'local';
+
+function getAuthMethod(): AuthMethod {
+  const raw = (process.env.AUTH_METHOD ?? 'github').trim().toLowerCase();
+  return raw === 'local' ? 'local' : 'github';
+}
 
 function getCookieOptions() {
   const isProd = process.env.NODE_ENV === 'production';
@@ -95,7 +102,62 @@ function redirectTo(reply: FastifyReply, url: string) {
 }
 
 export async function registerAuthRoutes(app: FastifyInstance) {
+  app.get('/auth/method', async (_req, reply) => {
+    reply.send({ method: getAuthMethod() });
+  });
+
+  app.post(
+    '/auth/local/login',
+    async (req: FastifyRequest<{ Body: { username?: string; password?: string } }>, reply) => {
+      if (getAuthMethod() !== 'local') {
+        reply.code(404).send({ error: 'Local auth not enabled' });
+        return;
+      }
+
+      const username = req.body?.username?.trim();
+      const password = req.body?.password ?? '';
+      const expectedUser = process.env.AUTH_ADMIN_USERNAME?.trim();
+      const expectedPass = process.env.AUTH_ADMIN_PASSWORD ?? '';
+
+      if (!username || !expectedUser || !expectedPass) {
+        reply.code(400).send({ error: 'Admin credentials not configured' });
+        return;
+      }
+
+      if (username !== expectedUser || password !== expectedPass) {
+        reply.code(401).send({ error: 'Invalid credentials' });
+        return;
+      }
+
+      const dbUser = await upsertLocalAdmin({
+        login: username,
+        displayName: username,
+      });
+
+      const session = await createSession(
+        {
+          userId: dbUser.id,
+          githubId: dbUser.githubId,
+          login: dbUser.githubLogin,
+        },
+        getSessionTtlMs(),
+      );
+
+      reply.setCookie(SESSION_COOKIE, session.id, {
+        ...getCookieOptions(),
+        maxAge: getSessionTtlMs() / 1000,
+      });
+
+      reply.send({ ok: true });
+    },
+  );
+
   app.get('/auth/github/login', async (_req, reply) => {
+    if (getAuthMethod() !== 'github') {
+      reply.code(404).send({ error: 'GitHub OAuth not enabled' });
+      return;
+    }
+
     const clientId = process.env.GITHUB_CLIENT_ID;
     if (!clientId) {
       reply.code(500).send({ error: 'GitHub OAuth not configured' });
@@ -118,6 +180,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.get(
     '/auth/github/callback',
     async (req: FastifyRequest<{ Querystring: { code?: string; state?: string } }>, reply) => {
+      if (getAuthMethod() !== 'github') {
+        reply.code(404).send({ error: 'GitHub OAuth not enabled' });
+        return;
+      }
+
       const { code, state } = req.query;
       const storedState = req.cookies?.[STATE_COOKIE];
       const failureRedirect = process.env.AUTH_FAILURE_REDIRECT ?? DEFAULT_FAILURE_REDIRECT;
