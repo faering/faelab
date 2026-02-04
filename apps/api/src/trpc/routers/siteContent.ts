@@ -11,6 +11,7 @@ import {
 
 import {
   createSiteContentPreset,
+  deleteSiteContentPreset,
   getSiteContent,
   getSiteContentPreset,
   listSiteContentPresets,
@@ -59,6 +60,14 @@ export const siteContentRouter = router({
         const ownerId = ctx.session?.userId;
         if (!ownerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
         return createSiteContentPreset(ownerId, input);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const ownerId = ctx.session?.userId;
+        if (!ownerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+        await deleteSiteContentPreset(ownerId, input.id);
       }),
   }),
 });

@@ -513,3 +513,13 @@ export async function createSiteContentPreset(
   if (!row) throw new Error('Failed to create preset');
   return mapPresetSummary(row);
 }
+
+export async function deleteSiteContentPreset(ownerId: string, presetId: string): Promise<void> {
+  await query(
+    `
+      DELETE FROM site_profile_presets
+      WHERE owner_id = $1 AND id = $2
+    `,
+    [ownerId, presetId],
+  );
+}

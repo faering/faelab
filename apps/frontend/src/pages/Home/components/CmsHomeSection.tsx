@@ -296,6 +296,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
   const [presetName, setPresetName] = React.useState('');
   const [isPresetSaveOpen, setIsPresetSaveOpen] = React.useState(false);
   const [loadedPresetName, setLoadedPresetName] = React.useState<string | null>(null);
+  const [pendingDeletePreset, setPendingDeletePreset] = React.useState<null | { id: string; name: string }>(null);
 
   const presetGetQuery = trpc.siteContent.presets.get.useQuery(
     { id: selectedPresetId },
@@ -363,6 +364,18 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     },
     onError: (err) => {
       setError(err.message ?? 'Failed to save profile');
+    },
+  });
+
+  const deletePresetMutation = trpc.siteContent.presets.delete.useMutation({
+    onSuccess: () => {
+      utils.siteContent.presets.list.invalidate();
+      setSelectedPresetId('');
+      setPendingDeletePreset(null);
+    },
+    onError: (err) => {
+      setError(err.message ?? 'Failed to delete preset');
+      setPendingDeletePreset(null);
     },
   });
 
@@ -531,6 +544,17 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
       content: normalizeDraft(mergedDraft),
     });
   };
+
+  const handleDeletePreset = () => {
+    const preset = presetsListQuery.data?.find((p) => p.id === selectedPresetId);
+    if (!preset) return;
+    setPendingDeletePreset({ id: preset.id, name: preset.name });
+  };
+
+  const confirmDeletePreset = () => {
+    if (!pendingDeletePreset) return;
+    deletePresetMutation.mutate({ id: pendingDeletePreset.id });
+  };
   const toolbar = (
     <button
       type="button"
@@ -583,6 +607,22 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             {presetsListQuery.isError && (
               <div className="mt-1 text-xs text-red-600 dark:text-red-300">
                 {presetsListQuery.error.message}
+              </div>
+            )}
+            {selectedPresetId && presetsListQuery.data && (
+              <div className="mt-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>
+                  Modified: {new Date(presetsListQuery.data.find((p) => p.id === selectedPresetId)?.updatedAt || '').toLocaleDateString()}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDeletePreset}
+                  className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                  aria-label="Delete preset"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
               </div>
             )}
           </label>
@@ -1452,6 +1492,47 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
           </label>
         </div>
       </section>
+
+      {pendingDeletePreset && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Cancel delete"
+            onClick={() => setPendingDeletePreset(null)}
+          />
+
+          <div
+            className="relative w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 shadow-xl p-5"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Confirm delete preset"
+          >
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Delete preset?</div>
+            <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Are you sure you want to delete <span className="font-medium">{pendingDeletePreset.name}</span>? This cannot be undone.
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
+                onClick={() => setPendingDeletePreset(null)}
+              >
+                No, keep it
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                onClick={confirmDeletePreset}
+              >
+                <Trash2 size={18} />
+                Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
