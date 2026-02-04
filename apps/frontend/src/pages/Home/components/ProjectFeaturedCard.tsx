@@ -1,7 +1,7 @@
-import { Project } from "../../../../packages/types/projectSchema";
+import { Project } from "../../../../../../packages/types/projectSchema";
 import { Star, ExternalLink } from 'lucide-react';
-import GitHubIconBlack from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
-import GitHubIconWhite from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
+import GitHubIconBlack from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import GitHubIconWhite from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
 
 interface ProjectCardProps {
   project: Project;

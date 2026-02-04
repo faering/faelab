@@ -1,9 +1,9 @@
 import { ArrowDown, Mail } from 'lucide-react';
-import GitHubIconBlack from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
-import GitHubIconWhite from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
-import LinkedInIconBlack from '../../icons/in-logo/InBug-Black.png';
-import LinkedInIconWhite from '../../icons/in-logo/InBug-White.png';
-import { portfolioConfig } from '../config/portfolio';
+import GitHubIconBlack from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
+import GitHubIconWhite from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
+import LinkedInIconBlack from '../../../../icons/in-logo/InBug-Black.png';
+import LinkedInIconWhite from '../../../../icons/in-logo/InBug-White.png';
+import { portfolioConfig } from '../../../config/portfolio';
 
 const Hero = () => {
   const scrollToAbout = () => {

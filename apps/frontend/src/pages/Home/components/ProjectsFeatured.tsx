@@ -1,4 +1,4 @@
-import { ProjectSchema, Project } from "../../../../packages/types/projectSchema";
+import { ProjectSchema, Project } from "../../../../../../packages/types/projectSchema";
 import { ProjectCard } from "./ProjectFeaturedCard";
 import { Link } from 'react-router-dom';
 

@@ -105,6 +105,124 @@ function normalizeDraft(input: SiteContentInput): SiteContentInput {
   };
 }
 
+type DraftErrors = {
+  profile: Partial<Record<keyof SiteContentInput['profile'], string>>;
+  aboutParagraphs: Record<string, string>;
+  aboutBadges: Record<string, string>;
+  skillCategories: Record<string, { title?: string; description?: string }>;
+  skillItems: Record<string, { label?: string; categoryId?: string }>;
+  skillTechnologies: Record<string, string>;
+  featuredProjects: Record<string, string>;
+};
+
+const EMPTY_ERRORS: DraftErrors = {
+  profile: {},
+  aboutParagraphs: {},
+  aboutBadges: {},
+  skillCategories: {},
+  skillItems: {},
+  skillTechnologies: {},
+  featuredProjects: {},
+};
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function validateDraft(draft: SiteContentInput): DraftErrors {
+  const errors: DraftErrors = {
+    profile: {},
+    aboutParagraphs: {},
+    aboutBadges: {},
+    skillCategories: {},
+    skillItems: {},
+    skillTechnologies: {},
+    featuredProjects: {},
+  };
+
+  const requiredProfileFields: Array<keyof SiteContentInput['profile']> = [
+    'heroName',
+    'heroTitle',
+    'heroBio',
+    'aboutLeftHeadline',
+    'aboutRightIcon',
+    'aboutRightTitle',
+    'aboutRightDescription',
+    'skillsIntro',
+    'contactTitle',
+    'contactSubtitle',
+    'contactEmail',
+    'contactPhone',
+    'contactLocation',
+  ];
+
+  for (const key of requiredProfileFields) {
+    if (!draft.profile[key].trim()) {
+      errors.profile[key] = 'Required';
+    }
+  }
+
+  if (draft.profile.contactEmail.trim() && !isValidEmail(draft.profile.contactEmail.trim())) {
+    errors.profile.contactEmail = 'Enter a valid email';
+  }
+
+  draft.aboutParagraphs.forEach((paragraph) => {
+    if (!paragraph.body.trim()) {
+      errors.aboutParagraphs[paragraph.id] = 'Required';
+    }
+  });
+
+  draft.aboutBadges.forEach((badge) => {
+    if (!badge.label.trim()) {
+      errors.aboutBadges[badge.id] = 'Required';
+    }
+  });
+
+  draft.skillCategories.forEach((category) => {
+    const categoryErrors: { title?: string; description?: string } = {};
+    if (!category.title.trim()) categoryErrors.title = 'Required';
+    if (!category.description.trim()) categoryErrors.description = 'Required';
+    if (categoryErrors.title || categoryErrors.description) {
+      errors.skillCategories[category.id] = categoryErrors;
+    }
+  });
+
+  draft.skillItems.forEach((item) => {
+    const itemErrors: { label?: string; categoryId?: string } = {};
+    if (!item.label.trim()) itemErrors.label = 'Required';
+    if (!item.categoryId.trim()) itemErrors.categoryId = 'Select a category';
+    if (itemErrors.label || itemErrors.categoryId) {
+      errors.skillItems[item.id] = itemErrors;
+    }
+  });
+
+  draft.skillTechnologies.forEach((tech) => {
+    if (!tech.label.trim()) {
+      errors.skillTechnologies[tech.id] = 'Required';
+    }
+  });
+
+  draft.featuredProjects.forEach((project, index) => {
+    if (!project.projectId.trim()) {
+      errors.featuredProjects[`${project.projectId}-${index}`] = 'Select a project';
+    }
+  });
+
+  return errors;
+}
+
+function hasErrors(errors: DraftErrors) {
+  return (
+    Object.values(errors.profile).some(Boolean) ||
+    Object.values(errors.aboutParagraphs).some(Boolean) ||
+    Object.values(errors.aboutBadges).some(Boolean) ||
+    Object.values(errors.skillTechnologies).some(Boolean) ||
+    Object.values(errors.featuredProjects).some(Boolean) ||
+    Object.values(errors.skillCategories).some((entry) => entry?.title || entry?.description) ||
+    Object.values(errors.skillItems).some((entry) => entry?.label || entry?.categoryId)
+  );
+}
+
 type CmsHomeEditorState = {
   content: React.ReactNode;
   statusBadge: React.ReactNode;
@@ -129,6 +247,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
   const [draft, setDraft] = React.useState<SiteContentInput>(EMPTY_CONTENT);
   const [baseline, setBaseline] = React.useState<SiteContentInput>(EMPTY_CONTENT);
   const [error, setError] = React.useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = React.useState<DraftErrors>(EMPTY_ERRORS);
   const [selectedPresetId, setSelectedPresetId] = React.useState('');
   const [presetName, setPresetName] = React.useState('');
   const [isPresetSaveOpen, setIsPresetSaveOpen] = React.useState(false);
@@ -144,6 +263,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     setDraft(next);
     setBaseline(next);
     setError(null);
+    setValidationErrors(EMPTY_ERRORS);
     setLoadedPresetName(null);
   }, [siteQuery.data]);
 
@@ -154,6 +274,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
       setDraft(next);
       setBaseline(next);
       setError(null);
+      setValidationErrors(EMPTY_ERRORS);
     },
     onError: (err) => {
       setError(err.message ?? 'Failed to save');
@@ -162,7 +283,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
 
   const createPresetMutation = trpc.siteContent.presets.create.useMutation({
     onSuccess: () => {
-      presetsListQuery.refetch();
+      utils.siteContent.presets.list.invalidate();
       setPresetName('');
       setIsPresetSaveOpen(false);
     },
@@ -202,6 +323,13 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
       profile: {
         ...prev.profile,
         [key]: value,
+      },
+    }));
+    setValidationErrors((prev) => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        [key]: undefined,
       },
     }));
   };
@@ -270,6 +398,12 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
 
   const handleSave = () => {
     setError(null);
+    const nextErrors = validateDraft(draft);
+    setValidationErrors(nextErrors);
+    if (hasErrors(nextErrors)) {
+      setError('Please fix the highlighted fields before saving.');
+      return;
+    }
     const normalized = normalizeDraft(draft);
     saveMutation.mutate(normalized);
   };
@@ -284,6 +418,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     if (!result.data) return;
 
     setDraft(normalizeDraft(result.data.content));
+    setValidationErrors(EMPTY_ERRORS);
     setLoadedPresetName(result.data.name);
     setError(null);
   };
@@ -292,6 +427,13 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     const name = presetName.trim();
     if (!name) {
       setError('Profile name is required.');
+      return;
+    }
+
+    const nextErrors = validateDraft(draft);
+    setValidationErrors(nextErrors);
+    if (hasErrors(nextErrors)) {
+      setError('Please fix the highlighted fields before saving.');
       return;
     }
 
@@ -350,6 +492,11 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                 </option>
               ))}
             </select>
+            {presetsListQuery.isError && (
+              <div className="mt-1 text-xs text-red-600 dark:text-red-300">
+                {presetsListQuery.error.message}
+              </div>
+            )}
           </label>
 
           <button
@@ -404,27 +551,48 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             <input
               value={draft.profile.heroName}
               onChange={(e) => updateProfileField('heroName', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.heroName
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
               placeholder="Your name"
             />
+            {validationErrors.profile.heroName && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.heroName}</div>
+            )}
           </label>
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Title</div>
             <input
               value={draft.profile.heroTitle}
               onChange={(e) => updateProfileField('heroTitle', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.heroTitle
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
               placeholder="Frontend Engineer"
             />
+            {validationErrors.profile.heroTitle && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.heroTitle}</div>
+            )}
           </label>
           <label className="block md:col-span-2">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Bio</div>
             <textarea
               value={draft.profile.heroBio}
               onChange={(e) => updateProfileField('heroBio', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[110px]"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[110px] ${
+                validationErrors.profile.heroBio
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
               placeholder="Short intro"
             />
+            {validationErrors.profile.heroBio && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.heroBio}</div>
+            )}
           </label>
         </div>
       </section>
@@ -447,33 +615,61 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             <input
               value={draft.profile.aboutLeftHeadline}
               onChange={(e) => updateProfileField('aboutLeftHeadline', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.aboutLeftHeadline
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.aboutLeftHeadline && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutLeftHeadline}</div>
+            )}
           </label>
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Right icon</div>
             <input
               value={draft.profile.aboutRightIcon}
               onChange={(e) => updateProfileField('aboutRightIcon', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.aboutRightIcon
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
               placeholder="lucide icon name"
             />
+            {validationErrors.profile.aboutRightIcon && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutRightIcon}</div>
+            )}
           </label>
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Right title</div>
             <input
               value={draft.profile.aboutRightTitle}
               onChange={(e) => updateProfileField('aboutRightTitle', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.aboutRightTitle
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.aboutRightTitle && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutRightTitle}</div>
+            )}
           </label>
           <label className="block md:col-span-2">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Right description</div>
             <textarea
               value={draft.profile.aboutRightDescription}
               onChange={(e) => updateProfileField('aboutRightDescription', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[100px]"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[100px] ${
+                validationErrors.profile.aboutRightDescription
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.aboutRightDescription && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutRightDescription}</div>
+            )}
           </label>
         </div>
 
@@ -508,9 +704,20 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                       p.id === paragraph.id ? { ...p, body } : p,
                     ),
                   }));
+                  setValidationErrors((prev) => ({
+                    ...prev,
+                    aboutParagraphs: { ...prev.aboutParagraphs, [paragraph.id]: undefined },
+                  }));
                 }}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[90px]"
+                className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[90px] ${
+                  validationErrors.aboutParagraphs[paragraph.id]
+                    ? 'border-red-400 focus:border-red-500'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                }`}
               />
+              {validationErrors.aboutParagraphs[paragraph.id] && (
+                <div className="mt-1 text-xs text-red-500">{validationErrors.aboutParagraphs[paragraph.id]}</div>
+              )}
             </div>
           ))}
         </div>
@@ -528,44 +735,57 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {draft.aboutBadges.map((badge) => (
-            <div key={badge.id} className="flex items-center gap-2">
-              <input
-                value={badge.label}
-                onChange={(e) => {
-                  const label = e.target.value;
-                  setDraft((prev) => ({
-                    ...prev,
-                    aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, label } : b)),
-                  }));
-                }}
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
-                placeholder="Badge label"
-              />
-              <input
-                value={badge.color ?? ''}
-                onChange={(e) => {
-                  const color = e.target.value;
-                  setDraft((prev) => ({
-                    ...prev,
-                    aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, color } : b)),
-                  }));
-                }}
-                className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
-                placeholder="Color"
-              />
-              <button
-                type="button"
-                className="text-red-600 dark:text-red-300"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    aboutBadges: withPositions(prev.aboutBadges.filter((b) => b.id !== badge.id)),
-                  }))
-                }
-                aria-label="Remove badge"
-              >
-                <Trash2 size={16} />
-              </button>
+            <div key={badge.id}>
+              <div className="flex items-center gap-2">
+                <input
+                  value={badge.label}
+                  onChange={(e) => {
+                    const label = e.target.value;
+                    setDraft((prev) => ({
+                      ...prev,
+                      aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, label } : b)),
+                    }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      aboutBadges: { ...prev.aboutBadges, [badge.id]: undefined },
+                    }));
+                  }}
+                  className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.aboutBadges[badge.id]
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                  }`}
+                  placeholder="Badge label"
+                />
+                <input
+                  value={badge.color ?? ''}
+                  onChange={(e) => {
+                    const color = e.target.value;
+                    setDraft((prev) => ({
+                      ...prev,
+                      aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, color } : b)),
+                    }));
+                  }}
+                  className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+                  placeholder="Color"
+                />
+                <button
+                  type="button"
+                  className="text-red-600 dark:text-red-300"
+                  onClick={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      aboutBadges: withPositions(prev.aboutBadges.filter((b) => b.id !== badge.id)),
+                    }))
+                  }
+                  aria-label="Remove badge"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              {validationErrors.aboutBadges[badge.id] && (
+                <div className="text-xs text-red-500">{validationErrors.aboutBadges[badge.id]}</div>
+              )}
             </div>
           ))}
         </div>
@@ -588,8 +808,15 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
           <textarea
             value={draft.profile.skillsIntro}
             onChange={(e) => updateProfileField('skillsIntro', e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[90px]"
+            className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[90px] ${
+              validationErrors.profile.skillsIntro
+                ? 'border-red-400 focus:border-red-500'
+                : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+            }`}
           />
+          {validationErrors.profile.skillsIntro && (
+            <div className="mt-1 text-xs text-red-500">{validationErrors.profile.skillsIntro}</div>
+          )}
         </label>
 
         <div className="mt-4 grid gap-4">
@@ -623,8 +850,19 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                         c.id === category.id ? { ...c, title } : c,
                       ),
                     }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      skillCategories: {
+                        ...prev.skillCategories,
+                        [category.id]: { ...prev.skillCategories[category.id], title: undefined },
+                      },
+                    }));
                   }}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+                  className={`rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.skillCategories[category.id]?.title
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                  }`}
                   placeholder="Category title"
                 />
                 <input
@@ -637,11 +875,29 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                         c.id === category.id ? { ...c, description } : c,
                       ),
                     }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      skillCategories: {
+                        ...prev.skillCategories,
+                        [category.id]: { ...prev.skillCategories[category.id], description: undefined },
+                      },
+                    }));
                   }}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+                  className={`rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.skillCategories[category.id]?.description
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                  }`}
                   placeholder="Category description"
                 />
               </div>
+              {(validationErrors.skillCategories[category.id]?.title ||
+                validationErrors.skillCategories[category.id]?.description) && (
+                <div className="mt-2 text-xs text-red-500">
+                  {validationErrors.skillCategories[category.id]?.title ??
+                    validationErrors.skillCategories[category.id]?.description}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -659,50 +915,79 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
         </div>
         <div className="mt-3 grid gap-3">
           {draft.skillItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-2">
-              <select
-                value={item.categoryId}
-                onChange={(e) => {
-                  const categoryId = e.target.value;
-                  setDraft((prev) => ({
-                    ...prev,
-                    skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, categoryId } : i)),
-                  }));
-                }}
-                className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
-              >
-                <option value="">Unassigned</option>
-                {draft.skillCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.title || 'Untitled'}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={item.label}
-                onChange={(e) => {
-                  const label = e.target.value;
-                  setDraft((prev) => ({
-                    ...prev,
-                    skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, label } : i)),
-                  }));
-                }}
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
-                placeholder="Skill label"
-              />
-              <button
-                type="button"
-                className="text-red-600 dark:text-red-300"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    skillItems: withPositions(prev.skillItems.filter((i) => i.id !== item.id)),
-                  }))
-                }
-                aria-label="Remove skill item"
-              >
-                <Trash2 size={16} />
-              </button>
+            <div key={item.id}>
+              <div className="flex items-center gap-2">
+                <select
+                  value={item.categoryId}
+                  onChange={(e) => {
+                    const categoryId = e.target.value;
+                    setDraft((prev) => ({
+                      ...prev,
+                      skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, categoryId } : i)),
+                    }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      skillItems: {
+                        ...prev.skillItems,
+                        [item.id]: { ...prev.skillItems[item.id], categoryId: undefined },
+                      },
+                    }));
+                  }}
+                  className={`rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.skillItems[item.id]?.categoryId
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                  }`}
+                >
+                  <option value="">Unassigned</option>
+                  {draft.skillCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.title || 'Untitled'}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={item.label}
+                  onChange={(e) => {
+                    const label = e.target.value;
+                    setDraft((prev) => ({
+                      ...prev,
+                      skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, label } : i)),
+                    }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      skillItems: {
+                        ...prev.skillItems,
+                        [item.id]: { ...prev.skillItems[item.id], label: undefined },
+                      },
+                    }));
+                  }}
+                  className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.skillItems[item.id]?.label
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                  }`}
+                  placeholder="Skill label"
+                />
+                <button
+                  type="button"
+                  className="text-red-600 dark:text-red-300"
+                  onClick={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      skillItems: withPositions(prev.skillItems.filter((i) => i.id !== item.id)),
+                    }))
+                  }
+                  aria-label="Remove skill item"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              {(validationErrors.skillItems[item.id]?.label || validationErrors.skillItems[item.id]?.categoryId) && (
+                <div className="text-xs text-red-500">
+                  {validationErrors.skillItems[item.id]?.label ?? validationErrors.skillItems[item.id]?.categoryId}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -720,32 +1005,45 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {draft.skillTechnologies.map((tech) => (
-            <div key={tech.id} className="flex items-center gap-2">
-              <input
-                value={tech.label}
-                onChange={(e) => {
-                  const label = e.target.value;
-                  setDraft((prev) => ({
-                    ...prev,
-                    skillTechnologies: prev.skillTechnologies.map((t) => (t.id === tech.id ? { ...t, label } : t)),
-                  }));
-                }}
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
-                placeholder="Technology"
-              />
-              <button
-                type="button"
-                className="text-red-600 dark:text-red-300"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    skillTechnologies: withPositions(prev.skillTechnologies.filter((t) => t.id !== tech.id)),
-                  }))
-                }
-                aria-label="Remove technology"
-              >
-                <Trash2 size={16} />
-              </button>
+            <div key={tech.id}>
+              <div className="flex items-center gap-2">
+                <input
+                  value={tech.label}
+                  onChange={(e) => {
+                    const label = e.target.value;
+                    setDraft((prev) => ({
+                      ...prev,
+                      skillTechnologies: prev.skillTechnologies.map((t) => (t.id === tech.id ? { ...t, label } : t)),
+                    }));
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      skillTechnologies: { ...prev.skillTechnologies, [tech.id]: undefined },
+                    }));
+                  }}
+                  className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.skillTechnologies[tech.id]
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                  }`}
+                  placeholder="Technology"
+                />
+                <button
+                  type="button"
+                  className="text-red-600 dark:text-red-300"
+                  onClick={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      skillTechnologies: withPositions(prev.skillTechnologies.filter((t) => t.id !== tech.id)),
+                    }))
+                  }
+                  aria-label="Remove technology"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              {validationErrors.skillTechnologies[tech.id] && (
+                <div className="text-xs text-red-500">{validationErrors.skillTechnologies[tech.id]}</div>
+              )}
             </div>
           ))}
         </div>
@@ -764,8 +1062,10 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
           </button>
         </div>
         <div className="mt-4 grid gap-3">
-          {draft.featuredProjects.map((entry, index) => (
-            <div key={`${entry.projectId}-${index}`} className="flex items-center gap-2">
+          {draft.featuredProjects.map((entry, index) => {
+            const entryKey = `${entry.projectId}-${index}`;
+            return (
+            <div key={entryKey} className="flex items-center gap-2">
               <select
                 value={entry.projectId}
                 onChange={(e) => {
@@ -776,8 +1076,16 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                       idx === index ? { ...p, projectId } : p,
                     ),
                   }));
+                  setValidationErrors((prev) => ({
+                    ...prev,
+                    featuredProjects: { ...prev.featuredProjects, [entryKey]: undefined },
+                  }));
                 }}
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+                className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                  validationErrors.featuredProjects[entryKey]
+                    ? 'border-red-400 focus:border-red-500'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                }`}
               >
                 <option value="">Select project</option>
                 {(projectsQuery.data ?? []).map((project) => (
@@ -800,8 +1108,18 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                 <Trash2 size={16} />
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
+        {draft.featuredProjects.map((_, index) => {
+          const entryKey = `${draft.featuredProjects[index]?.projectId ?? ''}-${index}`;
+          const errorMessage = validationErrors.featuredProjects[entryKey];
+          return errorMessage ? (
+            <div key={`${entryKey}-error`} className="text-xs text-red-500">
+              {errorMessage}
+            </div>
+          ) : null;
+        })}
       </section>
 
       <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6">
@@ -812,16 +1130,30 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             <input
               value={draft.profile.contactTitle}
               onChange={(e) => updateProfileField('contactTitle', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.contactTitle
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.contactTitle && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.contactTitle}</div>
+            )}
           </label>
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Subtitle</div>
             <input
               value={draft.profile.contactSubtitle}
               onChange={(e) => updateProfileField('contactSubtitle', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.contactSubtitle
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.contactSubtitle && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.contactSubtitle}</div>
+            )}
           </label>
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Email</div>
@@ -829,24 +1161,45 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
               type="email"
               value={draft.profile.contactEmail}
               onChange={(e) => updateProfileField('contactEmail', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.contactEmail
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.contactEmail && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.contactEmail}</div>
+            )}
           </label>
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Phone</div>
             <input
               value={draft.profile.contactPhone}
               onChange={(e) => updateProfileField('contactPhone', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.contactPhone
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.contactPhone && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.contactPhone}</div>
+            )}
           </label>
           <label className="block md:col-span-2">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Location</div>
             <input
               value={draft.profile.contactLocation}
               onChange={(e) => updateProfileField('contactLocation', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                validationErrors.profile.contactLocation
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+              }`}
             />
+            {validationErrors.profile.contactLocation && (
+              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.contactLocation}</div>
+            )}
           </label>
         </div>
       </section>
