@@ -2,7 +2,17 @@ import { initTRPC, TRPCError } from '@trpc/server';
 
 import type { TRPCContext } from './context.js';
 
-const t = initTRPC.context<TRPCContext>().create();
+const t = initTRPC.context<TRPCContext>().create({
+  errorFormatter({ shape, error }) {
+    console.error('[TRPC Error]', {
+      code: error.code,
+      message: error.message,
+      cause: error.cause,
+      stack: error.stack,
+    });
+    return shape;
+  },
+});
 
 export const router = t.router;
 export const publicProcedure = t.procedure;

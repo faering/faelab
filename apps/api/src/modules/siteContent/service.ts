@@ -46,8 +46,14 @@ type DbSiteContentPresetRow = {
 type DbSiteContentPresetSummaryRow = {
   id: string;
   name: string;
-  updatedAt: Date;
+  updatedAt: Date | string;
 };
+
+function toIsoString(value: Date | string) {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'string') return new Date(value).toISOString();
+  return new Date(value as unknown as string).toISOString();
+}
 
 function mapProfile(row: DbSiteProfileRow): SiteProfile {
   return {
@@ -76,8 +82,8 @@ function mapPreset(row: DbSiteContentPresetRow): SiteContentPreset {
     ownerId: row.ownerId,
     name: row.name,
     content: row.content,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: toIsoString(row.createdAt),
+    updatedAt: toIsoString(row.updatedAt),
   };
 }
 
@@ -85,7 +91,7 @@ function mapPresetSummary(row: DbSiteContentPresetSummaryRow): SiteContentPreset
   return {
     id: row.id,
     name: row.name,
-    updatedAt: row.updatedAt.toISOString(),
+    updatedAt: toIsoString(row.updatedAt),
   };
 }
 
@@ -445,6 +451,25 @@ export async function getSiteContentPreset(
   ownerId: string,
   presetId: string,
 ): Promise<SiteContentPreset | null> {
+  if (process.env.NODE_ENV !== 'production') {
+    const devRow = await queryOne<DbSiteContentPresetRow>(
+      `
+        SELECT id,
+               owner_id AS "ownerId",
+               name,
+               content,
+               created_at AS "createdAt",
+               updated_at AS "updatedAt"
+        FROM site_profile_presets
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [presetId],
+    );
+
+    return devRow ? mapPreset(devRow) : null;
+  }
+
   const row = await queryOne<DbSiteContentPresetRow>(
     `
       SELECT id,

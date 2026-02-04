@@ -272,6 +272,7 @@ type CmsHomeEditorState = {
   isDirty: boolean;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHomeEditorState {
   const utils = trpc.useUtils();
   const siteQuery = trpc.siteContent.get.useQuery(undefined, {
@@ -280,7 +281,8 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
   });
   const presetsListQuery = trpc.siteContent.presets.list.useQuery(undefined, {
     retry: 0,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
   const projectsQuery = trpc.projects.list.useQuery(undefined, {
     staleTime: 30_000,
@@ -353,8 +355,9 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
   });
 
   const createPresetMutation = trpc.siteContent.presets.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (created) => {
       utils.siteContent.presets.list.invalidate();
+      setSelectedPresetId(created.id);
       setPresetName('');
       setIsPresetSaveOpen(false);
     },
@@ -561,7 +564,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Load preset</div>
             <select
@@ -591,6 +594,15 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             disabled={!selectedPresetId || presetGetQuery.isFetching}
           >
             {presetGetQuery.isFetching ? 'Loading…' : 'Load'}
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
+            onClick={() => presetsListQuery.refetch()}
+            disabled={presetsListQuery.isFetching}
+          >
+            {presetsListQuery.isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
 
