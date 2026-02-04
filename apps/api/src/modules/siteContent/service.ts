@@ -8,6 +8,7 @@ import type {
   SiteContentInput,
   SiteContentPreset,
   SiteContentPresetCreateInput,
+  SiteContentPresetUpdateInput,
   SiteContentPresetSummary,
   SiteProfile,
   SkillCategory,
@@ -511,6 +512,28 @@ export async function createSiteContentPreset(
   );
 
   if (!row) throw new Error('Failed to create preset');
+  return mapPresetSummary(row);
+}
+
+export async function updateSiteContentPreset(
+  ownerId: string,
+  input: SiteContentPresetUpdateInput,
+): Promise<SiteContentPresetSummary> {
+  const row = await queryOne<DbSiteContentPresetSummaryRow>(
+    `
+      UPDATE site_profile_presets
+      SET name = $1,
+          content = $2,
+          updated_at = NOW()
+      WHERE owner_id = $3 AND id = $4
+      RETURNING id,
+                name,
+                updated_at AS "updatedAt"
+    `,
+    [input.name.trim(), input.content, ownerId, input.id],
+  );
+
+  if (!row) throw new Error('Failed to update preset');
   return mapPresetSummary(row);
 }
 

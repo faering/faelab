@@ -175,6 +175,12 @@ export const SiteContentPresetCreateInputSchema = z.object({
   content: SiteContentInputSchema,
 });
 
+export const SiteContentPresetUpdateInputSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  content: SiteContentInputSchema,
+});
+
 export type SiteProfile = z.infer<typeof SiteProfileSchema>;
 export type AboutParagraph = z.infer<typeof AboutParagraphSchema>;
 export type AboutBadge = z.infer<typeof AboutBadgeSchema>;
@@ -197,3 +203,4 @@ export type SkillTechnologyInput = z.infer<typeof SkillTechnologyInputSchema>;
 export type FeaturedProjectInput = z.infer<typeof FeaturedProjectInputSchema>;
 export type SiteContentInput = z.infer<typeof SiteContentInputSchema>;
 export type SiteContentPresetCreateInput = z.infer<typeof SiteContentPresetCreateInputSchema>;
+export type SiteContentPresetUpdateInput = z.infer<typeof SiteContentPresetUpdateInputSchema>;

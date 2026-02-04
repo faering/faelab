@@ -367,6 +367,16 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     },
   });
 
+  const updatePresetMutation = trpc.siteContent.presets.update.useMutation({
+    onSuccess: (updated) => {
+      utils.siteContent.presets.list.invalidate();
+      setLoadedPresetName(updated.name);
+    },
+    onError: (err) => {
+      setError(err.message ?? 'Failed to update preset');
+    },
+  });
+
   const deletePresetMutation = trpc.siteContent.presets.delete.useMutation({
     onSuccess: () => {
       utils.siteContent.presets.list.invalidate();
@@ -545,6 +555,28 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     });
   };
 
+  const handleUpdatePreset = () => {
+    if (!selectedPresetId) return;
+    
+    const mergedDraft = withLegacyAboutHighlight(draft);
+    const nextErrors = validateDraft(mergedDraft);
+    setValidationErrors(nextErrors);
+    if (hasErrors(nextErrors)) {
+      setError('Please fix the highlighted fields before saving.');
+      return;
+    }
+
+    const preset = presetsListQuery.data?.find((p) => p.id === selectedPresetId);
+    if (!preset) return;
+
+    setError(null);
+    updatePresetMutation.mutate({
+      id: selectedPresetId,
+      name: preset.name,
+      content: normalizeDraft(mergedDraft),
+    });
+  };
+
   const handleDeletePreset = () => {
     const preset = presetsListQuery.data?.find((p) => p.id === selectedPresetId);
     if (!preset) return;
@@ -588,7 +620,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
           <label className="block">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Load preset</div>
             <select
@@ -626,6 +658,18 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
               </div>
             )}
           </label>
+
+          {loadedPresetName && (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors disabled:opacity-60"
+              onClick={handleUpdatePreset}
+              disabled={updatePresetMutation.isPending}
+            >
+              <Save size={16} />
+              {updatePresetMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
+          )}
 
           <button
             type="button"
@@ -667,7 +711,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
               disabled={createPresetMutation.isPending}
             >
               <Save size={16} />
-              {createPresetMutation.isPending ? 'Saving…' : 'Save preset'}
+              {createPresetMutation.isPending ? 'Saving…' : 'Save as new'}
             </button>
             <button
               type="button"

@@ -5,6 +5,7 @@ import {
   SiteContentInputSchema,
   SiteContentSchema,
   SiteContentPresetCreateInputSchema,
+  SiteContentPresetUpdateInputSchema,
   SiteContentPresetSchema,
   SiteContentPresetSummarySchema,
 } from '@portfolio/types';
@@ -15,6 +16,7 @@ import {
   getSiteContent,
   getSiteContentPreset,
   listSiteContentPresets,
+  updateSiteContentPreset,
   upsertSiteContent,
 } from '../../modules/siteContent/service.js';
 import { adminProcedure, router } from '../init.js';
@@ -60,6 +62,15 @@ export const siteContentRouter = router({
         const ownerId = ctx.session?.userId;
         if (!ownerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
         return createSiteContentPreset(ownerId, input);
+      }),
+
+    update: adminProcedure
+      .input(SiteContentPresetUpdateInputSchema)
+      .output(SiteContentPresetSummarySchema)
+      .mutation(async ({ ctx, input }) => {
+        const ownerId = ctx.session?.userId;
+        if (!ownerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+        return updateSiteContentPreset(ownerId, input);
       }),
 
     delete: adminProcedure
