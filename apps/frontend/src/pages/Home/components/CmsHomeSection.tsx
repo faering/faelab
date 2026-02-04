@@ -26,6 +26,7 @@ const EMPTY_CONTENT: SiteContentInput = {
   },
   aboutParagraphs: [],
   aboutBadges: [],
+  aboutHighlights: [],
   skillCategories: [],
   skillItems: [],
   skillTechnologies: [],
@@ -60,6 +61,14 @@ function toInput(content: SiteContent): SiteContentInput {
       label: item.label,
       color: item.color ?? undefined,
     })),
+    aboutHighlights: content.aboutHighlights.map((item) => ({
+      id: item.id,
+      position: item.position,
+      icon: item.icon,
+      title: item.title,
+      description: item.description,
+      color: item.color ?? undefined,
+    })),
     skillCategories: content.skillCategories.map((item) => ({
       id: item.id,
       position: item.position,
@@ -71,6 +80,7 @@ function toInput(content: SiteContent): SiteContentInput {
       categoryId: item.categoryId,
       position: item.position,
       label: item.label,
+      skillLevel: item.skillLevel,
     })),
     skillTechnologies: content.skillTechnologies.map((item) => ({
       id: item.id,
@@ -98,6 +108,7 @@ function normalizeDraft(input: SiteContentInput): SiteContentInput {
     ...input,
     aboutParagraphs: withPositions(input.aboutParagraphs),
     aboutBadges: withPositions(input.aboutBadges),
+    aboutHighlights: withPositions(input.aboutHighlights),
     skillCategories: withPositions(input.skillCategories),
     skillItems: withPositions(input.skillItems),
     skillTechnologies: withPositions(input.skillTechnologies),
@@ -105,12 +116,28 @@ function normalizeDraft(input: SiteContentInput): SiteContentInput {
   };
 }
 
+function withLegacyAboutHighlight(input: SiteContentInput): SiteContentInput {
+  const firstHighlight = input.aboutHighlights[0];
+  if (!firstHighlight) return input;
+
+  return {
+    ...input,
+    profile: {
+      ...input.profile,
+      aboutRightIcon: firstHighlight.icon || input.profile.aboutRightIcon,
+      aboutRightTitle: firstHighlight.title || input.profile.aboutRightTitle,
+      aboutRightDescription: firstHighlight.description || input.profile.aboutRightDescription,
+    },
+  };
+}
+
 type DraftErrors = {
   profile: Partial<Record<keyof SiteContentInput['profile'], string>>;
   aboutParagraphs: Record<string, string>;
   aboutBadges: Record<string, string>;
+  aboutHighlights: Record<string, { icon?: string; title?: string; description?: string }>;
   skillCategories: Record<string, { title?: string; description?: string }>;
-  skillItems: Record<string, { label?: string; categoryId?: string }>;
+  skillItems: Record<string, { label?: string; categoryId?: string; skillLevel?: string }>;
   skillTechnologies: Record<string, string>;
   featuredProjects: Record<string, string>;
 };
@@ -119,11 +146,14 @@ const EMPTY_ERRORS: DraftErrors = {
   profile: {},
   aboutParagraphs: {},
   aboutBadges: {},
+  aboutHighlights: {},
   skillCategories: {},
   skillItems: {},
   skillTechnologies: {},
   featuredProjects: {},
 };
+
+const ABOUT_BADGE_COLORS = ['#f472b6', '#c084fc', '#22d3ee'];
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -134,6 +164,7 @@ function validateDraft(draft: SiteContentInput): DraftErrors {
     profile: {},
     aboutParagraphs: {},
     aboutBadges: {},
+    aboutHighlights: {},
     skillCategories: {},
     skillItems: {},
     skillTechnologies: {},
@@ -145,9 +176,6 @@ function validateDraft(draft: SiteContentInput): DraftErrors {
     'heroTitle',
     'heroBio',
     'aboutLeftHeadline',
-    'aboutRightIcon',
-    'aboutRightTitle',
-    'aboutRightDescription',
     'skillsIntro',
     'contactTitle',
     'contactSubtitle',
@@ -178,6 +206,16 @@ function validateDraft(draft: SiteContentInput): DraftErrors {
     }
   });
 
+  draft.aboutHighlights.forEach((highlight) => {
+    const highlightErrors: { icon?: string; title?: string; description?: string } = {};
+    if (!highlight.icon.trim()) highlightErrors.icon = 'Required';
+    if (!highlight.title.trim()) highlightErrors.title = 'Required';
+    if (!highlight.description.trim()) highlightErrors.description = 'Required';
+    if (highlightErrors.icon || highlightErrors.title || highlightErrors.description) {
+      errors.aboutHighlights[highlight.id] = highlightErrors;
+    }
+  });
+
   draft.skillCategories.forEach((category) => {
     const categoryErrors: { title?: string; description?: string } = {};
     if (!category.title.trim()) categoryErrors.title = 'Required';
@@ -187,11 +225,14 @@ function validateDraft(draft: SiteContentInput): DraftErrors {
     }
   });
 
+  const hasCategories = draft.skillCategories.length > 0;
+
   draft.skillItems.forEach((item) => {
-    const itemErrors: { label?: string; categoryId?: string } = {};
+    const itemErrors: { label?: string; categoryId?: string; skillLevel?: string } = {};
     if (!item.label.trim()) itemErrors.label = 'Required';
-    if (!item.categoryId.trim()) itemErrors.categoryId = 'Select a category';
-    if (itemErrors.label || itemErrors.categoryId) {
+    if (hasCategories && !item.categoryId.trim()) itemErrors.categoryId = 'Select a category';
+    if (Number.isNaN(item.skillLevel) || item.skillLevel < 0 || item.skillLevel > 100) itemErrors.skillLevel = '0–100';
+    if (itemErrors.label || itemErrors.categoryId || itemErrors.skillLevel) {
       errors.skillItems[item.id] = itemErrors;
     }
   });
@@ -216,10 +257,11 @@ function hasErrors(errors: DraftErrors) {
     Object.values(errors.profile).some(Boolean) ||
     Object.values(errors.aboutParagraphs).some(Boolean) ||
     Object.values(errors.aboutBadges).some(Boolean) ||
+    Object.values(errors.aboutHighlights).some((entry) => entry?.icon || entry?.title || entry?.description) ||
     Object.values(errors.skillTechnologies).some(Boolean) ||
     Object.values(errors.featuredProjects).some(Boolean) ||
     Object.values(errors.skillCategories).some((entry) => entry?.title || entry?.description) ||
-    Object.values(errors.skillItems).some((entry) => entry?.label || entry?.categoryId)
+    Object.values(errors.skillItems).some((entry) => entry?.label || entry?.categoryId || entry?.skillLevel)
   );
 }
 
@@ -260,12 +302,41 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
 
   React.useEffect(() => {
     const next = siteQuery.data ? normalizeDraft(toInput(siteQuery.data)) : EMPTY_CONTENT;
-    setDraft(next);
-    setBaseline(next);
+    const highlights = next.aboutHighlights.length > 0
+      ? next.aboutHighlights
+      : Array.from({ length: 3 }, (_, index) => ({
+          id: createId(),
+          position: index,
+          icon: '',
+          title: '',
+          description: '',
+          color: ABOUT_BADGE_COLORS[index % ABOUT_BADGE_COLORS.length],
+        }));
+    const merged = {
+      ...next,
+      aboutHighlights: withPositions(highlights),
+    };
+    setDraft(merged);
+    setBaseline(merged);
     setError(null);
     setValidationErrors(EMPTY_ERRORS);
     setLoadedPresetName(null);
   }, [siteQuery.data]);
+
+  React.useEffect(() => {
+    if (draft.skillCategories.length === 0) return;
+
+    const fallbackCategoryId = draft.skillCategories[0].id;
+    const needsUpdate = draft.skillItems.some((item) => !item.categoryId.trim());
+    if (!needsUpdate) return;
+
+    setDraft((prev) => ({
+      ...prev,
+      skillItems: prev.skillItems.map((item) =>
+        item.categoryId.trim() ? item : { ...item, categoryId: fallbackCategoryId },
+      ),
+    }));
+  }, [draft.skillCategories, draft.skillItems]);
 
   const saveMutation = trpc.siteContent.upsert.useMutation({
     onSuccess: (saved) => {
@@ -345,11 +416,24 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
   };
 
   const addAboutBadge = () => {
+    const nextColor = ABOUT_BADGE_COLORS[draft.aboutBadges.length % ABOUT_BADGE_COLORS.length];
     setDraft((prev) => ({
       ...prev,
       aboutBadges: withPositions([
         ...prev.aboutBadges,
-        { id: createId(), position: prev.aboutBadges.length, label: '', color: '' },
+        { id: createId(), position: prev.aboutBadges.length, label: '', color: nextColor },
+      ]),
+    }));
+  };
+
+  const addAboutHighlight = () => {
+    if (draft.aboutHighlights.length >= 3) return;
+    const nextColor = ABOUT_BADGE_COLORS[draft.aboutHighlights.length % ABOUT_BADGE_COLORS.length];
+    setDraft((prev) => ({
+      ...prev,
+      aboutHighlights: withPositions([
+        ...prev.aboutHighlights,
+        { id: createId(), position: prev.aboutHighlights.length, icon: '', title: '', description: '', color: nextColor },
       ]),
     }));
   };
@@ -364,13 +448,12 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     }));
   };
 
-  const addSkillItem = () => {
-    const firstCategory = draft.skillCategories[0]?.id ?? '';
+  const addSkillItem = (categoryId: string) => {
     setDraft((prev) => ({
       ...prev,
       skillItems: withPositions([
         ...prev.skillItems,
-        { id: createId(), categoryId: firstCategory, position: prev.skillItems.length, label: '' },
+        { id: createId(), categoryId, position: prev.skillItems.length, label: '', skillLevel: 80 },
       ]),
     }));
   };
@@ -398,13 +481,14 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
 
   const handleSave = () => {
     setError(null);
-    const nextErrors = validateDraft(draft);
+    const mergedDraft = withLegacyAboutHighlight(draft);
+    const nextErrors = validateDraft(mergedDraft);
     setValidationErrors(nextErrors);
     if (hasErrors(nextErrors)) {
       setError('Please fix the highlighted fields before saving.');
       return;
     }
-    const normalized = normalizeDraft(draft);
+    const normalized = normalizeDraft(mergedDraft);
     saveMutation.mutate(normalized);
   };
 
@@ -430,7 +514,8 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
       return;
     }
 
-    const nextErrors = validateDraft(draft);
+    const mergedDraft = withLegacyAboutHighlight(draft);
+    const nextErrors = validateDraft(mergedDraft);
     setValidationErrors(nextErrors);
     if (hasErrors(nextErrors)) {
       setError('Please fix the highlighted fields before saving.');
@@ -440,7 +525,7 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     setError(null);
     createPresetMutation.mutate({
       name,
-      content: normalizeDraft(draft),
+      content: normalizeDraft(mergedDraft),
     });
   };
   const toolbar = (
@@ -609,199 +694,309 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             Add paragraph
           </button>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="block md:col-span-2">
-            <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Left headline</div>
-            <input
-              value={draft.profile.aboutLeftHeadline}
-              onChange={(e) => updateProfileField('aboutLeftHeadline', e.target.value)}
-              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
-                validationErrors.profile.aboutLeftHeadline
-                  ? 'border-red-400 focus:border-red-500'
-                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-              }`}
-            />
-            {validationErrors.profile.aboutLeftHeadline && (
-              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutLeftHeadline}</div>
-            )}
-          </label>
-          <label className="block">
-            <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Right icon</div>
-            <input
-              value={draft.profile.aboutRightIcon}
-              onChange={(e) => updateProfileField('aboutRightIcon', e.target.value)}
-              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
-                validationErrors.profile.aboutRightIcon
-                  ? 'border-red-400 focus:border-red-500'
-                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-              }`}
-              placeholder="lucide icon name"
-            />
-            {validationErrors.profile.aboutRightIcon && (
-              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutRightIcon}</div>
-            )}
-          </label>
-          <label className="block">
-            <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Right title</div>
-            <input
-              value={draft.profile.aboutRightTitle}
-              onChange={(e) => updateProfileField('aboutRightTitle', e.target.value)}
-              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
-                validationErrors.profile.aboutRightTitle
-                  ? 'border-red-400 focus:border-red-500'
-                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-              }`}
-            />
-            {validationErrors.profile.aboutRightTitle && (
-              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutRightTitle}</div>
-            )}
-          </label>
-          <label className="block md:col-span-2">
-            <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Right description</div>
-            <textarea
-              value={draft.profile.aboutRightDescription}
-              onChange={(e) => updateProfileField('aboutRightDescription', e.target.value)}
-              className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[100px] ${
-                validationErrors.profile.aboutRightDescription
-                  ? 'border-red-400 focus:border-red-500'
-                  : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-              }`}
-            />
-            {validationErrors.profile.aboutRightDescription && (
-              <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutRightDescription}</div>
-            )}
-          </label>
-        </div>
 
-        <div className="mt-6 grid gap-4">
-          {draft.aboutParagraphs.map((paragraph, index) => (
-            <div key={paragraph.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  Paragraph {index + 1}
-                </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-300"
-                  onClick={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      aboutParagraphs: withPositions(prev.aboutParagraphs.filter((p) => p.id !== paragraph.id)),
-                    }))
-                  }
-                >
-                  <Trash2 size={14} />
-                  Remove
-                </button>
-              </div>
-              <textarea
-                value={paragraph.body}
-                onChange={(e) => {
-                  const body = e.target.value;
-                  setDraft((prev) => ({
-                    ...prev,
-                    aboutParagraphs: prev.aboutParagraphs.map((p) =>
-                      p.id === paragraph.id ? { ...p, body } : p,
-                    ),
-                  }));
-                  setValidationErrors((prev) => ({
-                    ...prev,
-                    aboutParagraphs: { ...prev.aboutParagraphs, [paragraph.id]: undefined },
-                  }));
-                }}
-                className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[90px] ${
-                  validationErrors.aboutParagraphs[paragraph.id]
-                    ? 'border-red-400 focus:border-red-500'
-                    : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-                }`}
-              />
-              {validationErrors.aboutParagraphs[paragraph.id] && (
-                <div className="mt-1 text-xs text-red-500">{validationErrors.aboutParagraphs[paragraph.id]}</div>
-              )}
+        <div className="mt-4 grid gap-5">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Left column</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              Headline, paragraphs, and badges shown on the left.
             </div>
-          ))}
-        </div>
 
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Badges</div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
-            onClick={addAboutBadge}
-          >
-            <Plus size={16} />
-            Add badge
-          </button>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {draft.aboutBadges.map((badge) => (
-            <div key={badge.id}>
-              <div className="flex items-center gap-2">
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="block md:col-span-2">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Left headline</div>
                 <input
-                  value={badge.label}
-                  onChange={(e) => {
-                    const label = e.target.value;
-                    setDraft((prev) => ({
-                      ...prev,
-                      aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, label } : b)),
-                    }));
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      aboutBadges: { ...prev.aboutBadges, [badge.id]: undefined },
-                    }));
-                  }}
-                  className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
-                    validationErrors.aboutBadges[badge.id]
+                  value={draft.profile.aboutLeftHeadline}
+                  onChange={(e) => updateProfileField('aboutLeftHeadline', e.target.value)}
+                  className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                    validationErrors.profile.aboutLeftHeadline
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
                   }`}
-                  placeholder="Badge label"
                 />
-                <input
-                  value={badge.color ?? ''}
-                  onChange={(e) => {
-                    const color = e.target.value;
-                    setDraft((prev) => ({
-                      ...prev,
-                      aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, color } : b)),
-                    }));
-                  }}
-                  className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
-                  placeholder="Color"
-                />
-                <button
-                  type="button"
-                  className="text-red-600 dark:text-red-300"
-                  onClick={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      aboutBadges: withPositions(prev.aboutBadges.filter((b) => b.id !== badge.id)),
-                    }))
-                  }
-                  aria-label="Remove badge"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-              {validationErrors.aboutBadges[badge.id] && (
-                <div className="text-xs text-red-500">{validationErrors.aboutBadges[badge.id]}</div>
-              )}
+                {validationErrors.profile.aboutLeftHeadline && (
+                  <div className="mt-1 text-xs text-red-500">{validationErrors.profile.aboutLeftHeadline}</div>
+                )}
+              </label>
             </div>
-          ))}
+
+            <div className="mt-6 grid gap-4">
+              {draft.aboutParagraphs.map((paragraph, index) => (
+                <div key={paragraph.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      Paragraph {index + 1}
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-300"
+                      onClick={() =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          aboutParagraphs: withPositions(prev.aboutParagraphs.filter((p) => p.id !== paragraph.id)),
+                        }))
+                      }
+                    >
+                      <Trash2 size={14} />
+                      Remove
+                    </button>
+                  </div>
+                  <textarea
+                    value={paragraph.body}
+                    onChange={(e) => {
+                      const body = e.target.value;
+                      setDraft((prev) => ({
+                        ...prev,
+                        aboutParagraphs: prev.aboutParagraphs.map((p) =>
+                          p.id === paragraph.id ? { ...p, body } : p,
+                        ),
+                      }));
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        aboutParagraphs: { ...prev.aboutParagraphs, [paragraph.id]: undefined },
+                      }));
+                    }}
+                    className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[90px] ${
+                      validationErrors.aboutParagraphs[paragraph.id]
+                        ? 'border-red-400 focus:border-red-500'
+                        : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                    }`}
+                  />
+                  {validationErrors.aboutParagraphs[paragraph.id] && (
+                    <div className="mt-1 text-xs text-red-500">{validationErrors.aboutParagraphs[paragraph.id]}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Badges</div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
+                onClick={addAboutBadge}
+              >
+                <Plus size={16} />
+                Add badge
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {draft.aboutBadges.map((badge) => (
+                <div key={badge.id}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={badge.label}
+                      onChange={(e) => {
+                        const label = e.target.value;
+                        setDraft((prev) => ({
+                          ...prev,
+                          aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, label } : b)),
+                        }));
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          aboutBadges: { ...prev.aboutBadges, [badge.id]: undefined },
+                        }));
+                      }}
+                      className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                        validationErrors.aboutBadges[badge.id]
+                          ? 'border-red-400 focus:border-red-500'
+                          : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                      }`}
+                      placeholder="Badge label"
+                    />
+                    <input
+                      value={badge.color ?? ''}
+                      onChange={(e) => {
+                        const color = e.target.value;
+                        setDraft((prev) => ({
+                          ...prev,
+                          aboutBadges: prev.aboutBadges.map((b) => (b.id === badge.id ? { ...b, color } : b)),
+                        }));
+                      }}
+                      className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+                      placeholder="Color"
+                    />
+                    <button
+                      type="button"
+                      className="text-red-600 dark:text-red-300"
+                      onClick={() =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          aboutBadges: withPositions(prev.aboutBadges.filter((b) => b.id !== badge.id)),
+                        }))
+                      }
+                      aria-label="Remove badge"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  {validationErrors.aboutBadges[badge.id] && (
+                    <div className="text-xs text-red-500">{validationErrors.aboutBadges[badge.id]}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Right highlight card</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              This content appears as the right-side highlight box.
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Highlights</div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
+                onClick={addAboutHighlight}
+                disabled={draft.aboutHighlights.length >= 3}
+              >
+                <Plus size={16} />
+                Add highlight
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              {draft.aboutHighlights.map((highlight, index) => (
+                <div key={highlight.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      Highlight {index + 1}
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-300"
+                      onClick={() =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          aboutHighlights: withPositions(prev.aboutHighlights.filter((h) => h.id !== highlight.id)),
+                        }))
+                      }
+                    >
+                      <Trash2 size={14} />
+                      Remove
+                    </button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Icon</div>
+                      <input
+                        value={highlight.icon}
+                        onChange={(e) => {
+                          const icon = e.target.value;
+                          setDraft((prev) => ({
+                            ...prev,
+                            aboutHighlights: prev.aboutHighlights.map((h) =>
+                              h.id === highlight.id ? { ...h, icon } : h,
+                            ),
+                          }));
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            aboutHighlights: {
+                              ...prev.aboutHighlights,
+                              [highlight.id]: { ...prev.aboutHighlights[highlight.id], icon: undefined },
+                            },
+                          }));
+                        }}
+                        className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                          validationErrors.aboutHighlights[highlight.id]?.icon
+                            ? 'border-red-400 focus:border-red-500'
+                            : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                        }`}
+                        placeholder="lucide icon name"
+                      />
+                      {validationErrors.aboutHighlights[highlight.id]?.icon && (
+                        <div className="mt-1 text-xs text-red-500">{validationErrors.aboutHighlights[highlight.id]?.icon}</div>
+                      )}
+                    </label>
+                    <label className="block">
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Color</div>
+                      <input
+                        value={highlight.color ?? ''}
+                        onChange={(e) => {
+                          const color = e.target.value;
+                          setDraft((prev) => ({
+                            ...prev,
+                            aboutHighlights: prev.aboutHighlights.map((h) =>
+                              h.id === highlight.id ? { ...h, color } : h,
+                            ),
+                          }));
+                        }}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+                        placeholder="#f472b6"
+                      />
+                    </label>
+                    <label className="block md:col-span-2">
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Title</div>
+                      <input
+                        value={highlight.title}
+                        onChange={(e) => {
+                          const title = e.target.value;
+                          setDraft((prev) => ({
+                            ...prev,
+                            aboutHighlights: prev.aboutHighlights.map((h) =>
+                              h.id === highlight.id ? { ...h, title } : h,
+                            ),
+                          }));
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            aboutHighlights: {
+                              ...prev.aboutHighlights,
+                              [highlight.id]: { ...prev.aboutHighlights[highlight.id], title: undefined },
+                            },
+                          }));
+                        }}
+                        className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                          validationErrors.aboutHighlights[highlight.id]?.title
+                            ? 'border-red-400 focus:border-red-500'
+                            : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                        }`}
+                      />
+                      {validationErrors.aboutHighlights[highlight.id]?.title && (
+                        <div className="mt-1 text-xs text-red-500">{validationErrors.aboutHighlights[highlight.id]?.title}</div>
+                      )}
+                    </label>
+                    <label className="block md:col-span-2">
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Description</div>
+                      <textarea
+                        value={highlight.description}
+                        onChange={(e) => {
+                          const description = e.target.value;
+                          setDraft((prev) => ({
+                            ...prev,
+                            aboutHighlights: prev.aboutHighlights.map((h) =>
+                              h.id === highlight.id ? { ...h, description } : h,
+                            ),
+                          }));
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            aboutHighlights: {
+                              ...prev.aboutHighlights,
+                              [highlight.id]: { ...prev.aboutHighlights[highlight.id], description: undefined },
+                            },
+                          }));
+                        }}
+                        className={`w-full rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 min-h-[100px] ${
+                          validationErrors.aboutHighlights[highlight.id]?.description
+                            ? 'border-red-400 focus:border-red-500'
+                            : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                        }`}
+                      />
+                      {validationErrors.aboutHighlights[highlight.id]?.description && (
+                        <div className="mt-1 text-xs text-red-500">{validationErrors.aboutHighlights[highlight.id]?.description}</div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6">
         <div className="flex items-center justify-between">
           <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Skills</div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
-            onClick={addSkillCategory}
-          >
-            <Plus size={16} />
-            Add category
-          </button>
         </div>
         <label className="block mt-4">
           <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Intro</div>
@@ -818,6 +1013,21 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
             <div className="mt-1 text-xs text-red-500">{validationErrors.profile.skillsIntro}</div>
           )}
         </label>
+
+        <div className="mt-4 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Categories</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">A category is a bundle of related skills.</div>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
+            onClick={addSkillCategory}
+          >
+            <Plus size={16} />
+            Add category
+          </button>
+        </div>
 
         <div className="mt-4 grid gap-4">
           {draft.skillCategories.map((category) => (
@@ -898,96 +1108,123 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
                     validationErrors.skillCategories[category.id]?.description}
                 </div>
               )}
-            </div>
-          ))}
-        </div>
 
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Skill items</div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
-            onClick={addSkillItem}
-          >
-            <Plus size={16} />
-            Add item
-          </button>
-        </div>
-        <div className="mt-3 grid gap-3">
-          {draft.skillItems.map((item) => (
-            <div key={item.id}>
-              <div className="flex items-center gap-2">
-                <select
-                  value={item.categoryId}
-                  onChange={(e) => {
-                    const categoryId = e.target.value;
-                    setDraft((prev) => ({
-                      ...prev,
-                      skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, categoryId } : i)),
-                    }));
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      skillItems: {
-                        ...prev.skillItems,
-                        [item.id]: { ...prev.skillItems[item.id], categoryId: undefined },
-                      },
-                    }));
-                  }}
-                  className={`rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
-                    validationErrors.skillItems[item.id]?.categoryId
-                      ? 'border-red-400 focus:border-red-500'
-                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-                  }`}
-                >
-                  <option value="">Unassigned</option>
-                  {draft.skillCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.title || 'Untitled'}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={item.label}
-                  onChange={(e) => {
-                    const label = e.target.value;
-                    setDraft((prev) => ({
-                      ...prev,
-                      skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, label } : i)),
-                    }));
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      skillItems: {
-                        ...prev.skillItems,
-                        [item.id]: { ...prev.skillItems[item.id], label: undefined },
-                      },
-                    }));
-                  }}
-                  className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
-                    validationErrors.skillItems[item.id]?.label
-                      ? 'border-red-400 focus:border-red-500'
-                      : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
-                  }`}
-                  placeholder="Skill label"
-                />
+              <div className="mt-5 flex items-center justify-between">
+                <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Items</div>
                 <button
                   type="button"
-                  className="text-red-600 dark:text-red-300"
-                  onClick={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      skillItems: withPositions(prev.skillItems.filter((i) => i.id !== item.id)),
-                    }))
-                  }
-                  aria-label="Remove skill item"
+                  className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
+                  onClick={() => addSkillItem(category.id)}
                 >
-                  <Trash2 size={16} />
+                  <Plus size={16} />
+                  Add item
                 </button>
               </div>
-              {(validationErrors.skillItems[item.id]?.label || validationErrors.skillItems[item.id]?.categoryId) && (
-                <div className="text-xs text-red-500">
-                  {validationErrors.skillItems[item.id]?.label ?? validationErrors.skillItems[item.id]?.categoryId}
-                </div>
-              )}
+
+              <div className="mt-3 grid gap-3">
+                {draft.skillItems
+                  .filter((item) => item.categoryId === category.id)
+                  .map((item) => (
+                    <div key={item.id}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={item.label}
+                          onChange={(e) => {
+                            const label = e.target.value;
+                            setDraft((prev) => ({
+                              ...prev,
+                              skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, label } : i)),
+                            }));
+                            setValidationErrors((prev) => ({
+                              ...prev,
+                              skillItems: {
+                                ...prev.skillItems,
+                                [item.id]: { ...prev.skillItems[item.id], label: undefined },
+                              },
+                            }));
+                          }}
+                          className={`flex-1 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                            validationErrors.skillItems[item.id]?.label
+                              ? 'border-red-400 focus:border-red-500'
+                              : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                          }`}
+                          placeholder="Skill label"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={item.skillLevel}
+                          onChange={(e) => {
+                            const level = Number(e.target.value);
+                            setDraft((prev) => ({
+                              ...prev,
+                              skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, skillLevel: level } : i)),
+                            }));
+                            setValidationErrors((prev) => ({
+                              ...prev,
+                              skillItems: {
+                                ...prev.skillItems,
+                                [item.id]: { ...prev.skillItems[item.id], skillLevel: undefined },
+                              },
+                            }));
+                          }}
+                          className={`w-20 rounded-xl border px-3 py-2 bg-white dark:bg-slate-950/30 ${
+                            validationErrors.skillItems[item.id]?.skillLevel
+                              ? 'border-red-400 focus:border-red-500'
+                              : 'border-slate-200 dark:border-slate-700 focus:border-purple-400'
+                          }`}
+                          aria-label="Skill level"
+                        />
+                        <button
+                          type="button"
+                          className="text-red-600 dark:text-red-300"
+                          onClick={() =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              skillItems: withPositions(prev.skillItems.filter((i) => i.id !== item.id)),
+                            }))
+                          }
+                          aria-label="Remove skill item"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={item.skillLevel}
+                          onChange={(e) => {
+                            const level = Number(e.target.value);
+                            setDraft((prev) => ({
+                              ...prev,
+                              skillItems: prev.skillItems.map((i) => (i.id === item.id ? { ...i, skillLevel: level } : i)),
+                            }));
+                            setValidationErrors((prev) => ({
+                              ...prev,
+                              skillItems: {
+                                ...prev.skillItems,
+                                [item.id]: { ...prev.skillItems[item.id], skillLevel: undefined },
+                              },
+                            }));
+                          }}
+                          className="w-full accent-purple-500"
+                        />
+                      </div>
+                      {validationErrors.skillItems[item.id]?.label && (
+                        <div className="text-xs text-red-500">{validationErrors.skillItems[item.id]?.label}</div>
+                      )}
+                      {validationErrors.skillItems[item.id]?.skillLevel && (
+                        <div className="text-xs text-red-500">{validationErrors.skillItems[item.id]?.skillLevel}</div>
+                      )}
+                    </div>
+                  ))}
+                {draft.skillItems.filter((item) => item.categoryId === category.id).length === 0 && (
+                  <div className="text-xs text-slate-500 dark:text-slate-400">No items yet.</div>
+                )}
+              </div>
             </div>
           ))}
         </div>

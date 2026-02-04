@@ -55,6 +55,26 @@ export const AboutBadgeInputSchema = AboutBadgeSchema.pick({
   color: true,
 });
 
+export const AboutHighlightSchema = z.object({
+  id: z.string(),
+  ownerId: z.string(),
+  profileId: z.string(),
+  position: z.number().int().nonnegative(),
+  icon: z.string(),
+  title: z.string(),
+  description: z.string(),
+  color: z.string().optional().nullable(),
+});
+
+export const AboutHighlightInputSchema = AboutHighlightSchema.pick({
+  id: true,
+  position: true,
+  icon: true,
+  title: true,
+  description: true,
+  color: true,
+});
+
 export const SkillCategorySchema = z.object({
   id: z.string(),
   ownerId: z.string(),
@@ -77,6 +97,7 @@ export const SkillItemSchema = z.object({
   categoryId: z.string(),
   position: z.number().int().nonnegative(),
   label: z.string(),
+  skillLevel: z.number().int().min(0).max(100),
 });
 
 export const SkillItemInputSchema = SkillItemSchema.pick({
@@ -84,6 +105,7 @@ export const SkillItemInputSchema = SkillItemSchema.pick({
   categoryId: true,
   position: true,
   label: true,
+  skillLevel: true,
 });
 
 export const SkillTechnologySchema = z.object({
@@ -115,6 +137,7 @@ export const SiteContentSchema = z.object({
   profile: SiteProfileSchema,
   aboutParagraphs: z.array(AboutParagraphSchema),
   aboutBadges: z.array(AboutBadgeSchema),
+  aboutHighlights: z.array(AboutHighlightSchema),
   skillCategories: z.array(SkillCategorySchema),
   skillItems: z.array(SkillItemSchema),
   skillTechnologies: z.array(SkillTechnologySchema),
@@ -125,6 +148,7 @@ export const SiteContentInputSchema = z.object({
   profile: SiteProfileInputSchema,
   aboutParagraphs: z.array(AboutParagraphInputSchema),
   aboutBadges: z.array(AboutBadgeInputSchema),
+  aboutHighlights: z.array(AboutHighlightInputSchema),
   skillCategories: z.array(SkillCategoryInputSchema),
   skillItems: z.array(SkillItemInputSchema),
   skillTechnologies: z.array(SkillTechnologyInputSchema),
@@ -154,6 +178,7 @@ export const SiteContentPresetCreateInputSchema = z.object({
 export type SiteProfile = z.infer<typeof SiteProfileSchema>;
 export type AboutParagraph = z.infer<typeof AboutParagraphSchema>;
 export type AboutBadge = z.infer<typeof AboutBadgeSchema>;
+export type AboutHighlight = z.infer<typeof AboutHighlightSchema>;
 export type SkillCategory = z.infer<typeof SkillCategorySchema>;
 export type SkillItem = z.infer<typeof SkillItemSchema>;
 export type SkillTechnology = z.infer<typeof SkillTechnologySchema>;
@@ -165,6 +190,7 @@ export type SiteContentPresetSummary = z.infer<typeof SiteContentPresetSummarySc
 export type SiteProfileInput = z.infer<typeof SiteProfileInputSchema>;
 export type AboutParagraphInput = z.infer<typeof AboutParagraphInputSchema>;
 export type AboutBadgeInput = z.infer<typeof AboutBadgeInputSchema>;
+export type AboutHighlightInput = z.infer<typeof AboutHighlightInputSchema>;
 export type SkillCategoryInput = z.infer<typeof SkillCategoryInputSchema>;
 export type SkillItemInput = z.infer<typeof SkillItemInputSchema>;
 export type SkillTechnologyInput = z.infer<typeof SkillTechnologyInputSchema>;

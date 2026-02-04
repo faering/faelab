@@ -1,6 +1,7 @@
 import { pool, query, queryOne } from '@portfolio/db';
 import type {
   AboutBadge,
+  AboutHighlight,
   AboutParagraph,
   FeaturedProject,
   SiteContent,
@@ -148,6 +149,23 @@ export async function getSiteContent(ownerId: string): Promise<SiteContent | nul
     [ownerId, profile.id],
   );
 
+  const aboutHighlights = await query<AboutHighlight>(
+    `
+      SELECT id,
+             owner_id AS "ownerId",
+             profile_id AS "profileId",
+             position,
+             icon,
+             title,
+             description,
+             color
+      FROM about_highlights
+      WHERE owner_id = $1 AND profile_id = $2
+      ORDER BY position ASC
+    `,
+    [ownerId, profile.id],
+  );
+
   const skillCategories = await query<SkillCategory>(
     `
       SELECT id,
@@ -169,7 +187,8 @@ export async function getSiteContent(ownerId: string): Promise<SiteContent | nul
              owner_id AS "ownerId",
              category_id AS "categoryId",
              position,
-             label
+             label,
+             "skillLevel" AS "skillLevel"
       FROM skill_items
       WHERE owner_id = $1
       ORDER BY position ASC
@@ -207,6 +226,7 @@ export async function getSiteContent(ownerId: string): Promise<SiteContent | nul
     profile,
     aboutParagraphs,
     aboutBadges,
+    aboutHighlights,
     skillCategories,
     skillItems,
     skillTechnologies,
@@ -307,6 +327,7 @@ export async function upsertSiteContent(ownerId: string, input: SiteContentInput
 
     await client.query('DELETE FROM about_paragraphs WHERE owner_id = $1 AND profile_id = $2', [ownerId, profileId]);
     await client.query('DELETE FROM about_badges WHERE owner_id = $1 AND profile_id = $2', [ownerId, profileId]);
+    await client.query('DELETE FROM about_highlights WHERE owner_id = $1 AND profile_id = $2', [ownerId, profileId]);
     await client.query('DELETE FROM skill_categories WHERE owner_id = $1 AND profile_id = $2', [ownerId, profileId]);
     await client.query('DELETE FROM skill_items WHERE owner_id = $1', [ownerId]);
     await client.query('DELETE FROM skill_technologies WHERE owner_id = $1 AND profile_id = $2', [ownerId, profileId]);
@@ -332,6 +353,25 @@ export async function upsertSiteContent(ownerId: string, input: SiteContentInput
       );
     }
 
+    for (const highlight of input.aboutHighlights) {
+      await client.query(
+        `
+          INSERT INTO about_highlights (id, owner_id, profile_id, position, icon, title, description, color)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        `,
+        [
+          highlight.id,
+          ownerId,
+          profileId,
+          highlight.position,
+          highlight.icon,
+          highlight.title,
+          highlight.description,
+          highlight.color ?? null,
+        ],
+      );
+    }
+
     for (const category of input.skillCategories) {
       await client.query(
         `
@@ -345,10 +385,10 @@ export async function upsertSiteContent(ownerId: string, input: SiteContentInput
     for (const item of input.skillItems) {
       await client.query(
         `
-          INSERT INTO skill_items (id, owner_id, category_id, position, label)
-          VALUES ($1,$2,$3,$4,$5)
+          INSERT INTO skill_items (id, owner_id, category_id, position, label, "skillLevel")
+          VALUES ($1,$2,$3,$4,$5,$6)
         `,
-        [item.id, ownerId, item.categoryId, item.position, item.label],
+        [item.id, ownerId, item.categoryId, item.position, item.label, item.skillLevel],
       );
     }
 

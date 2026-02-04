@@ -6,20 +6,35 @@ import Skills from './components/Skills';
 import { trpc } from '../../trpc/trpc';
 
 export default function HomePage() {
+  const siteContentQuery = trpc.siteContent.get.useQuery(undefined, {
+    retry: 0,
+    refetchOnWindowFocus: false,
+  });
   const projectsQuery = trpc.projects.list.useQuery(undefined, {
     staleTime: 60_000,
   });
 
   const projects = projectsQuery.data ?? [];
+  const siteContent = siteContentQuery.data ?? null;
   const featured = projects.some((p) => p.featured)
     ? projects.filter((p) => p.featured)
     : projects.slice(0, 3);
 
   return (
     <>
-      <Hero />
-      <About />
-      <Skills />
+      <Hero profile={siteContent?.profile} />
+      <About
+        profile={siteContent?.profile}
+        aboutParagraphs={siteContent?.aboutParagraphs ?? []}
+        aboutBadges={siteContent?.aboutBadges ?? []}
+        aboutHighlights={siteContent?.aboutHighlights ?? []}
+      />
+      <Skills
+        profile={siteContent?.profile}
+        skillCategories={siteContent?.skillCategories ?? []}
+        skillItems={siteContent?.skillItems ?? []}
+        skillTechnologies={siteContent?.skillTechnologies ?? []}
+      />
       {projectsQuery.isLoading ? (
         <section id="projects" className="py-20 bg-white dark:bg-gray-900">
           <div className="container mx-auto px-6">
@@ -52,7 +67,7 @@ export default function HomePage() {
       ) : (
         <ProjectsFeatured data={featured} />
       )}
-      <Contact />
+      <Contact profile={siteContent?.profile} />
     </>
   );
 }

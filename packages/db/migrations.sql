@@ -87,6 +87,17 @@ CREATE TABLE IF NOT EXISTS about_badges (
     color TEXT
 );
 
+CREATE TABLE IF NOT EXISTS about_highlights (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    profile_id TEXT NOT NULL REFERENCES site_profile(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    icon TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    color TEXT
+);
+
 CREATE TABLE IF NOT EXISTS skill_categories (
     id TEXT PRIMARY KEY,
     owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -101,8 +112,15 @@ CREATE TABLE IF NOT EXISTS skill_items (
     owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     category_id TEXT NOT NULL REFERENCES skill_categories(id) ON DELETE CASCADE,
     position INT NOT NULL,
-    label TEXT NOT NULL
+    label TEXT NOT NULL,
+    "skillLevel" INT NOT NULL DEFAULT 80 CHECK ("skillLevel" >= 0 AND "skillLevel" <= 100)
 );
+
+ALTER TABLE skill_items
+    ADD COLUMN IF NOT EXISTS "skillLevel" INT NOT NULL DEFAULT 80;
+
+ALTER TABLE skill_items
+    ADD CONSTRAINT IF NOT EXISTS skill_items_level_range CHECK ("skillLevel" >= 0 AND "skillLevel" <= 100);
 
 CREATE TABLE IF NOT EXISTS skill_technologies (
     id TEXT PRIMARY KEY,
@@ -123,6 +141,7 @@ CREATE INDEX IF NOT EXISTS idx_site_profile_owner_id ON site_profile(owner_id);
 CREATE INDEX IF NOT EXISTS idx_site_profile_presets_owner_id ON site_profile_presets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_about_paragraphs_profile_id ON about_paragraphs(profile_id);
 CREATE INDEX IF NOT EXISTS idx_about_badges_profile_id ON about_badges(profile_id);
+CREATE INDEX IF NOT EXISTS idx_about_highlights_profile_id ON about_highlights(profile_id);
 CREATE INDEX IF NOT EXISTS idx_skill_categories_profile_id ON skill_categories(profile_id);
 CREATE INDEX IF NOT EXISTS idx_skill_items_category_id ON skill_items(category_id);
 CREATE INDEX IF NOT EXISTS idx_skill_technologies_profile_id ON skill_technologies(profile_id);

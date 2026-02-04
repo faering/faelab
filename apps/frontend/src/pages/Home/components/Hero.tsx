@@ -1,17 +1,26 @@
-import { ArrowDown, Mail } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import GitHubIconBlack from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
 import GitHubIconWhite from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
 import LinkedInIconBlack from '../../../../icons/in-logo/InBug-Black.png';
 import LinkedInIconWhite from '../../../../icons/in-logo/InBug-White.png';
 import { portfolioConfig } from '../../../config/portfolio';
+import type { SiteProfile } from '../../../../../../packages/types/siteContentSchema';
 
-const Hero = () => {
+type HeroProps = {
+  profile?: SiteProfile | null;
+};
+
+const Hero = ({ profile }: HeroProps) => {
   const scrollToAbout = () => {
     const aboutSection = document.getElementById('about');
     if (aboutSection) {
       aboutSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  const heroName = profile?.heroName || portfolioConfig.name;
+  const heroTitle = profile?.heroTitle || portfolioConfig.title;
+  const heroBio = profile?.heroBio || portfolioConfig.bio;
 
   return (
     <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden">
@@ -23,16 +32,16 @@ const Hero = () => {
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
             Hi, I'm{' '}
             <span className="bg-gradient-to-r from-pink-400 to-purple-400 dark:from-purple-700 dark:to-pink-700 bg-clip-text text-transparent">
-              {portfolioConfig.name}
+              {heroName}
             </span>
           </h1>
           
           <h2 className="text-2xl md:text-3xl text-purple-600 dark:text-purple-300 font-light mb-8">
-            {portfolioConfig.title}
+            {heroTitle}
           </h2>
           
           <p className="text-xl text-slate-600 dark:text-slate-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-            {portfolioConfig.bio}
+            {heroBio}
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">

@@ -5,8 +5,13 @@ import GitHubIconWhite from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat
 import LinkedInIconBlack from '../../../../icons/in-logo/InBug-Black.png';
 import LinkedInIconWhite from '../../../../icons/in-logo/InBug-White.png';
 import { portfolioConfig } from '../../../config/portfolio';
+import type { SiteProfile } from '../../../../../../packages/types/siteContentSchema';
 
-const Contact = () => {
+type ContactProps = {
+  profile?: SiteProfile | null;
+};
+
+const Contact = ({ profile }: ContactProps) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -35,11 +40,11 @@ const Contact = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-6">
-              Let's Work Together
+              {profile?.contactTitle || "Let's Work Together"}
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-pink-400 to-purple-400 mx-auto mb-8"></div>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Ready to bring your ideas to life? Let's discuss your next project.
+              {profile?.contactSubtitle || "Ready to bring your ideas to life? Let's discuss your next project."}
             </p>
           </div>
 
@@ -55,7 +60,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4 className="text-slate-800 dark:text-white font-semibold">Email</h4>
-                    <p className="text-slate-600 dark:text-slate-300">{portfolioConfig.email}</p>
+                    <p className="text-slate-600 dark:text-slate-300">{profile?.contactEmail || portfolioConfig.email}</p>
                   </div>
                 </div>
                 
@@ -65,7 +70,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4 className="text-slate-800 dark:text-white font-semibold">Phone</h4>
-                    <p className="text-slate-600 dark:text-slate-300">{portfolioConfig.phone}</p>
+                    <p className="text-slate-600 dark:text-slate-300">{profile?.contactPhone || portfolioConfig.phone}</p>
                   </div>
                 </div>
                 
@@ -75,7 +80,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4 className="text-slate-800 dark:text-white font-semibold">Location</h4>
-                    <p className="text-slate-600 dark:text-slate-300">{portfolioConfig.location}</p>
+                    <p className="text-slate-600 dark:text-slate-300">{profile?.contactLocation || portfolioConfig.location}</p>
                   </div>
                 </div>
               </div>
