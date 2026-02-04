@@ -118,6 +118,10 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     retry: 0,
     refetchOnWindowFocus: false,
   });
+  const presetsListQuery = trpc.siteContent.presets.list.useQuery(undefined, {
+    retry: 0,
+    refetchOnWindowFocus: false,
+  });
   const projectsQuery = trpc.projects.list.useQuery(undefined, {
     staleTime: 30_000,
   });
@@ -125,12 +129,22 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
   const [draft, setDraft] = React.useState<SiteContentInput>(EMPTY_CONTENT);
   const [baseline, setBaseline] = React.useState<SiteContentInput>(EMPTY_CONTENT);
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedPresetId, setSelectedPresetId] = React.useState('');
+  const [presetName, setPresetName] = React.useState('');
+  const [isPresetSaveOpen, setIsPresetSaveOpen] = React.useState(false);
+  const [loadedPresetName, setLoadedPresetName] = React.useState<string | null>(null);
+
+  const presetGetQuery = trpc.siteContent.presets.get.useQuery(
+    { id: selectedPresetId },
+    { enabled: false },
+  );
 
   React.useEffect(() => {
     const next = siteQuery.data ? normalizeDraft(toInput(siteQuery.data)) : EMPTY_CONTENT;
     setDraft(next);
     setBaseline(next);
     setError(null);
+    setLoadedPresetName(null);
   }, [siteQuery.data]);
 
   const saveMutation = trpc.siteContent.upsert.useMutation({
@@ -143,6 +157,17 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     },
     onError: (err) => {
       setError(err.message ?? 'Failed to save');
+    },
+  });
+
+  const createPresetMutation = trpc.siteContent.presets.create.useMutation({
+    onSuccess: () => {
+      presetsListQuery.refetch();
+      setPresetName('');
+      setIsPresetSaveOpen(false);
+    },
+    onError: (err) => {
+      setError(err.message ?? 'Failed to save profile');
     },
   });
 
@@ -248,6 +273,34 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
     const normalized = normalizeDraft(draft);
     saveMutation.mutate(normalized);
   };
+
+  const handleLoadPreset = async () => {
+    if (!selectedPresetId) return;
+    if (isDirty && !window.confirm('You have unsaved changes. Load a profile preset anyway?')) {
+      return;
+    }
+
+    const result = await presetGetQuery.refetch();
+    if (!result.data) return;
+
+    setDraft(normalizeDraft(result.data.content));
+    setLoadedPresetName(result.data.name);
+    setError(null);
+  };
+
+  const handleSavePreset = () => {
+    const name = presetName.trim();
+    if (!name) {
+      setError('Profile name is required.');
+      return;
+    }
+
+    setError(null);
+    createPresetMutation.mutate({
+      name,
+      content: normalizeDraft(draft),
+    });
+  };
   const toolbar = (
     <button
       type="button"
@@ -267,6 +320,81 @@ export function useCmsHomeEditor({ onDirtyChange }: CmsHomeSectionProps): CmsHom
           {error}
         </div>
       )}
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6">
+        <div className="flex items-center justify-between">
+          <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile presets</div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-sm text-purple-600 dark:text-purple-300 hover:underline"
+            onClick={() => setIsPresetSaveOpen((open) => !open)}
+          >
+            <Plus size={16} />
+            Save profile
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <label className="block">
+            <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Load preset</div>
+            <select
+              value={selectedPresetId}
+              onChange={(e) => setSelectedPresetId(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              disabled={presetsListQuery.isLoading}
+            >
+              <option value="">Select a profile</option>
+              {(presetsListQuery.data ?? []).map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
+            onClick={handleLoadPreset}
+            disabled={!selectedPresetId || presetGetQuery.isFetching}
+          >
+            {presetGetQuery.isFetching ? 'Loading…' : 'Load'}
+          </button>
+        </div>
+
+        {loadedPresetName && (
+          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Loaded preset: <span className="font-medium text-slate-700 dark:text-slate-200">{loadedPresetName}</span> (not saved yet)
+          </div>
+        )}
+
+        {isPresetSaveOpen && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <input
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              className="flex-1 min-w-[220px] rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30"
+              placeholder="Profile name"
+            />
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors disabled:opacity-60"
+              onClick={handleSavePreset}
+              disabled={createPresetMutation.isPending}
+            >
+              <Save size={16} />
+              {createPresetMutation.isPending ? 'Saving…' : 'Save preset'}
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => setIsPresetSaveOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6">
         <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Hero</div>

@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS site_profile (
     UNIQUE (owner_id)
 );
 
+CREATE TABLE IF NOT EXISTS site_profile_presets (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    content JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS about_paragraphs (
     id TEXT PRIMARY KEY,
     owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -111,6 +120,7 @@ CREATE TABLE IF NOT EXISTS featured_projects (
 );
 
 CREATE INDEX IF NOT EXISTS idx_site_profile_owner_id ON site_profile(owner_id);
+CREATE INDEX IF NOT EXISTS idx_site_profile_presets_owner_id ON site_profile_presets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_about_paragraphs_profile_id ON about_paragraphs(profile_id);
 CREATE INDEX IF NOT EXISTS idx_about_badges_profile_id ON about_badges(profile_id);
 CREATE INDEX IF NOT EXISTS idx_skill_categories_profile_id ON skill_categories(profile_id);

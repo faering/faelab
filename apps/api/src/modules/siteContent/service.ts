@@ -5,6 +5,9 @@ import type {
   FeaturedProject,
   SiteContent,
   SiteContentInput,
+  SiteContentPreset,
+  SiteContentPresetCreateInput,
+  SiteContentPresetSummary,
   SiteProfile,
   SkillCategory,
   SkillItem,
@@ -30,6 +33,21 @@ type DbSiteProfileRow = {
   updatedAt: Date;
 };
 
+type DbSiteContentPresetRow = {
+  id: string;
+  ownerId: string;
+  name: string;
+  content: SiteContentInput;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type DbSiteContentPresetSummaryRow = {
+  id: string;
+  name: string;
+  updatedAt: Date;
+};
+
 function mapProfile(row: DbSiteProfileRow): SiteProfile {
   return {
     id: row.id,
@@ -47,6 +65,25 @@ function mapProfile(row: DbSiteProfileRow): SiteProfile {
     contactEmail: row.contactEmail,
     contactPhone: row.contactPhone,
     contactLocation: row.contactLocation,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function mapPreset(row: DbSiteContentPresetRow): SiteContentPreset {
+  return {
+    id: row.id,
+    ownerId: row.ownerId,
+    name: row.name,
+    content: row.content,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function mapPresetSummary(row: DbSiteContentPresetSummaryRow): SiteContentPresetSummary {
+  return {
+    id: row.id,
+    name: row.name,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -346,4 +383,68 @@ export async function upsertSiteContent(ownerId: string, input: SiteContentInput
   const result = await getSiteContent(ownerId);
   if (!result) throw new Error('Failed to load site content after update');
   return result;
+}
+
+export async function listSiteContentPresets(ownerId: string): Promise<SiteContentPresetSummary[]> {
+  const rows = await query<DbSiteContentPresetSummaryRow>(
+    `
+      SELECT id,
+             name,
+             updated_at AS "updatedAt"
+      FROM site_profile_presets
+      WHERE owner_id = $1
+      ORDER BY updated_at DESC
+    `,
+    [ownerId],
+  );
+
+  return rows.map(mapPresetSummary);
+}
+
+export async function getSiteContentPreset(
+  ownerId: string,
+  presetId: string,
+): Promise<SiteContentPreset | null> {
+  const row = await queryOne<DbSiteContentPresetRow>(
+    `
+      SELECT id,
+             owner_id AS "ownerId",
+             name,
+             content,
+             created_at AS "createdAt",
+             updated_at AS "updatedAt"
+      FROM site_profile_presets
+      WHERE owner_id = $1 AND id = $2
+      LIMIT 1
+    `,
+    [ownerId, presetId],
+  );
+
+  return row ? mapPreset(row) : null;
+}
+
+export async function createSiteContentPreset(
+  ownerId: string,
+  input: SiteContentPresetCreateInput,
+): Promise<SiteContentPresetSummary> {
+  const id = crypto.randomUUID();
+
+  const row = await queryOne<DbSiteContentPresetSummaryRow>(
+    `
+      INSERT INTO site_profile_presets (
+        id,
+        owner_id,
+        name,
+        content
+      )
+      VALUES ($1,$2,$3,$4)
+      RETURNING id,
+                name,
+                updated_at AS "updatedAt"
+    `,
+    [id, ownerId, input.name.trim(), input.content],
+  );
+
+  if (!row) throw new Error('Failed to create preset');
+  return mapPresetSummary(row);
 }

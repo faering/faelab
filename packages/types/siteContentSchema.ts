@@ -131,6 +131,26 @@ export const SiteContentInputSchema = z.object({
   featuredProjects: z.array(FeaturedProjectInputSchema),
 });
 
+export const SiteContentPresetSchema = z.object({
+  id: z.string(),
+  ownerId: z.string(),
+  name: z.string(),
+  content: SiteContentInputSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const SiteContentPresetSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  updatedAt: z.string(),
+});
+
+export const SiteContentPresetCreateInputSchema = z.object({
+  name: z.string().min(1),
+  content: SiteContentInputSchema,
+});
+
 export type SiteProfile = z.infer<typeof SiteProfileSchema>;
 export type AboutParagraph = z.infer<typeof AboutParagraphSchema>;
 export type AboutBadge = z.infer<typeof AboutBadgeSchema>;
@@ -139,6 +159,8 @@ export type SkillItem = z.infer<typeof SkillItemSchema>;
 export type SkillTechnology = z.infer<typeof SkillTechnologySchema>;
 export type FeaturedProject = z.infer<typeof FeaturedProjectSchema>;
 export type SiteContent = z.infer<typeof SiteContentSchema>;
+export type SiteContentPreset = z.infer<typeof SiteContentPresetSchema>;
+export type SiteContentPresetSummary = z.infer<typeof SiteContentPresetSummarySchema>;
 
 export type SiteProfileInput = z.infer<typeof SiteProfileInputSchema>;
 export type AboutParagraphInput = z.infer<typeof AboutParagraphInputSchema>;
@@ -148,3 +170,4 @@ export type SkillItemInput = z.infer<typeof SkillItemInputSchema>;
 export type SkillTechnologyInput = z.infer<typeof SkillTechnologyInputSchema>;
 export type FeaturedProjectInput = z.infer<typeof FeaturedProjectInputSchema>;
 export type SiteContentInput = z.infer<typeof SiteContentInputSchema>;
+export type SiteContentPresetCreateInput = z.infer<typeof SiteContentPresetCreateInputSchema>;
