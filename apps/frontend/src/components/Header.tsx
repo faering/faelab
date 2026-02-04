@@ -95,15 +95,11 @@ const Header = () => {
 
   const openCms = () => {
     try {
-      localStorage.setItem('projectsCmsOpen', '1');
-      localStorage.setItem('projectsCmsResetOnNextOpen', '0');
+      localStorage.setItem('cmsOpen', '1');
     } catch {
       // ignore
     }
     window.dispatchEvent(new Event('cms-open'));
-    if (location.pathname !== '/projects') {
-      navigate('/projects');
-    }
   };
 
   const handleLogin = () => {

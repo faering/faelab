@@ -146,8 +146,15 @@ export type CmsProjectsSectionProps = {
   onDirtyChange?: (dirty: boolean) => void;
 };
 
-export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSectionProps) {
-  const [activeSectionId, setActiveSectionId] = React.useState<'projects' | 'hero'>('projects');
+type CmsProjectsEditorState = {
+  content: React.ReactNode;
+  statusBadge: React.ReactNode;
+  toolbar: React.ReactNode;
+  search: { value: string; onChange: (value: string) => void; placeholder?: string };
+  isDirty: boolean;
+};
+
+export function useCmsProjectsEditor({ onDirtyChange }: CmsProjectsSectionProps): CmsProjectsEditorState {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [view, setView] = React.useState<ViewState>(() => {
     try {
@@ -247,7 +254,7 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
     noDiscardNavRef.current?.focus();
   }, [pendingNavigateBack]);
 
-  const isDirty = React.useMemo(() => {
+  const projectsIsDirty = React.useMemo(() => {
     if (pendingDelete) return false;
     if (view.kind === 'list') return false;
     if (view.kind === 'create') return !isDraftEmpty(draft);
@@ -260,8 +267,8 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
   }, [draft, pendingDelete, projects, view]);
 
   React.useEffect(() => {
-    onDirtyChange?.(isDirty);
-  }, [isDirty, onDirtyChange]);
+    onDirtyChange?.(projectsIsDirty);
+  }, [projectsIsDirty, onDirtyChange]);
 
   const startCreate = () => {
     setErrors({});
@@ -279,7 +286,7 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
   };
 
   const goBackToList = () => {
-    if (isDirty) {
+    if (projectsIsDirty) {
       setPendingNavigateBack(true);
       return;
     }
@@ -375,57 +382,33 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
     </span>
   );
 
-  const isProjectsSection = activeSectionId === 'projects';
+  const toolbar =
+    view.kind === 'list' ? (
+      <button
+        type="button"
+        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+        onClick={startCreate}
+        disabled={createMutation.isPending || updateMutation.isPending || deleteMutation.isPending}
+      >
+        <Plus size={18} />
+        New
+      </button>
+    ) : undefined;
 
-  return (
-    <CmsUi
-      title={activeSectionId === 'projects' ? 'Projects' : 'Hero'}
-      subtitle={
-        activeSectionId === 'projects'
-          ? 'Create and edit portfolio projects.'
-          : 'Edit the hero section content.'
-      }
-      sections={[
-        { id: 'projects', label: 'Projects', shortLabel: 'P' },
-        { id: 'hero', label: 'Hero', shortLabel: 'H' },
-      ]}
-      activeSectionId={activeSectionId}
-      onSectionChange={setActiveSectionId}
-      statusBadge={isProjectsSection ? statusBadge : undefined}
-      toolbar={
-        isProjectsSection && view.kind === 'list' ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors"
-            onClick={startCreate}
-            disabled={createMutation.isPending || updateMutation.isPending || deleteMutation.isPending}
-          >
-            <Plus size={18} />
-            New
-          </button>
-        ) : undefined
-      }
-      search={isProjectsSection ? { value: searchTerm, onChange: setSearchTerm, placeholder: 'Search projects…' } : undefined}
-      renderContent={() => (
-        <>
-          {!isProjectsSection && (
-            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-6 text-sm text-slate-600 dark:text-slate-300">
-              Hero editor coming next.
-            </div>
+  const content = (
+    <>
+      {(createMutation.isError || updateMutation.isError || deleteMutation.isError) && (
+        <div className="mb-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+          {(
+            createMutation.error?.message ||
+            updateMutation.error?.message ||
+            deleteMutation.error?.message ||
+            'Request failed'
           )}
+        </div>
+      )}
 
-          {isProjectsSection && (createMutation.isError || updateMutation.isError || deleteMutation.isError) && (
-            <div className="mb-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
-              {(
-                createMutation.error?.message ||
-                updateMutation.error?.message ||
-                deleteMutation.error?.message ||
-                'Request failed'
-              )}
-            </div>
-          )}
-
-          {isProjectsSection && (view.kind === 'list' ? (
+      {view.kind === 'list' ? (
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-slate-100/70 dark:bg-slate-800/30 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                 <div className="col-span-6">Title</div>
@@ -623,11 +606,8 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
                 </div>
               </div>
             </>
-          ))}
-        </>
-      )}
-    >
-      {isProjectsSection && pendingDelete && (
+          )}
+      {pendingDelete && (
         <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
           <button
             type="button"
@@ -669,7 +649,7 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
         </div>
       )}
 
-      {isProjectsSection && pendingNavigateBack && (
+      {pendingNavigateBack && (
         <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
           <button
             type="button"
@@ -709,6 +689,32 @@ export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSection
           </div>
         </div>
       )}
-    </CmsUi>
+    </>
+  );
+
+  return {
+    content,
+    statusBadge,
+    toolbar,
+    search: { value: searchTerm, onChange: setSearchTerm, placeholder: 'Search projects…' },
+    isDirty: projectsIsDirty,
+  };
+}
+
+export default function CmsProjectsSection({ onDirtyChange }: CmsProjectsSectionProps) {
+  const { content, statusBadge, toolbar, search } = useCmsProjectsEditor({ onDirtyChange });
+
+  return (
+    <CmsUi
+      title="Projects"
+      subtitle="Create and edit portfolio projects."
+      sections={[{ id: 'projects', label: 'Projects', shortLabel: 'P' }]}
+      activeSectionId="projects"
+      statusBadge={statusBadge}
+      toolbar={toolbar}
+      search={search}
+      renderContent={() => content}
+    />
   );
 }
+

@@ -5,7 +5,6 @@ import ProjectList from './components/ProjectList';
 import ViewSettings from './components/ViewSettingsBox';
 import ProjectFilterDropdown from './components/ProjectFilterDropdown';
 import ProjectGrid from './components/ProjectGrid';
-import CmsProjectsSection from './components/CmsProjectsSection';
 import { trpc } from '../../trpc/trpc';
 
 const VIEW_MODE_KEY = 'projectsViewMode';
@@ -48,8 +47,6 @@ const ProjectsPage: React.FC = () => {
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('featured');
-
-  const [cmsIsDirty, setCmsIsDirty] = useState(false);
 
   // Extract unique tags and tools
   const tagOptions = getUnique(allProjects, 'tags').map((t) => ({ label: t, value: t }));
@@ -98,12 +95,6 @@ const ProjectsPage: React.FC = () => {
           setViewMode={setViewMode}
           sortMode={sortMode}
           onSortModeChange={setSortMode}
-          cmsTitle="Projects CMS"
-          cmsIsDirty={cmsIsDirty}
-          onCmsOpenChange={(open) => {
-            if (!open) setCmsIsDirty(false);
-          }}
-          cmsContent={<CmsProjectsSection onDirtyChange={setCmsIsDirty} />}
         >
           <input
             value={searchTerm}
