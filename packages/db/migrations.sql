@@ -137,6 +137,23 @@ CREATE TABLE IF NOT EXISTS featured_projects (
     PRIMARY KEY (owner_id, project_id)
 );
 
+-- Videos table for portfolio video content
+CREATE TABLE IF NOT EXISTS videos (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    video_url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    duration INTEGER,
+    tags TEXT[],
+    featured BOOLEAN DEFAULT FALSE,
+    owner_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Data integrity checks
+    CHECK (duration IS NULL OR duration > 0)
+);
+
 CREATE INDEX IF NOT EXISTS idx_site_profile_owner_id ON site_profile(owner_id);
 CREATE INDEX IF NOT EXISTS idx_site_profile_presets_owner_id ON site_profile_presets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_about_paragraphs_profile_id ON about_paragraphs(profile_id);
@@ -146,3 +163,6 @@ CREATE INDEX IF NOT EXISTS idx_skill_categories_profile_id ON skill_categories(p
 CREATE INDEX IF NOT EXISTS idx_skill_items_category_id ON skill_items(category_id);
 CREATE INDEX IF NOT EXISTS idx_skill_technologies_profile_id ON skill_technologies(profile_id);
 CREATE INDEX IF NOT EXISTS idx_featured_projects_owner_id ON featured_projects(owner_id);
+CREATE INDEX IF NOT EXISTS idx_videos_owner_id ON videos(owner_id);
+CREATE INDEX IF NOT EXISTS idx_videos_featured ON videos(featured);
+CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at DESC);
