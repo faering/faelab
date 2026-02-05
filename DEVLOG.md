@@ -182,9 +182,9 @@ Now that the CMS edits real DB data, the next wins are about making it feel prod
 - [ ] Add a dedicated `health/ping` API procedure (instead of using `projects.list` as the connectivity probe)
 - [ ] Improve error display for mutations (field-level where possible, toast/banner globally)
   - [ ] Live URL and Repo URL fields should conduct checks to see if real URL (i.e. https//www.example.com)
-- [ ] Add image handling strategy (upload + storage)
+- [x] Add image handling strategy (upload + storage)
 - [x] Add authentication gates for CMS actions (even a lightweight first pass)
-- [ ] Deployment readiness: env config, database migrations workflow, and runtime logging
+- [x] Deployment readiness: env config, database migrations workflow, and runtime logging
 
 ## 0.1.0 (31-01-2026) — Authentication
 
@@ -231,10 +231,203 @@ Why this direction:
 - It keeps development fast (local admin) while making the eventual OAuth switch a configuration change, not a rewrite.
 - It aligns the data layer (users + sessions + owner_id) with the multi-user roadmap.
 
+## 0.1.0 (05-02-2026) — Site Content Management & File Uploads
+
+### What I set out to build
+
+The portfolio needed two critical capabilities:
+
+1. **Content Management**: A real CMS for the homepage (not just Projects)
+2. **Media Handling**: Professional file uploads for images and videos
+
+The goal was to make the entire site editable through the CMS while maintaining the polish and safety guardrails established in earlier iterations.
+
+### Site Content Management System
+
+#### Why homepage content needed its own data model
+
+Until now, homepage content (Hero section, About, Skills) was hardcoded in components. This made even simple text changes require a code deploy.
+
+I built a **site profiles** system with:
+
+- **Database schema** (`site_profile` table) for Hero, About, Skills, and Contact sections
+- **tRPC router** (`siteContent`) with CRUD operations
+- **CMS UI** with tabbed sections matching the homepage structure
+- **Profile presets**: Save multiple configurations and switch between them
+
+The preset system was key: it lets me experiment with different portfolio configurations (personal vs. professional tone, different skill emphasis) without losing previous versions.
+
+#### Design decisions
+
+**Why nested data structures?**
+
+The About section has multiple paragraphs, badges, and highlights. Instead of flattening these into separate tables with foreign keys, I used Postgres JSON columns:
+
+```sql
+about_paragraphs JSONB NOT NULL DEFAULT '[]'
+about_badges JSONB NOT NULL DEFAULT '[]'
+about_highlights JSONB NOT NULL DEFAULT '[]'
+```
+
+This keeps the data model aligned with how the UI thinks about content ("About is a list of paragraphs") while avoiding join complexity for what's essentially document data.
+
+**Why profile presets?**
+
+I wanted the ability to A/B test different portfolio configurations without manually backing up content. The preset system (`site_profile_presets` table) stores named snapshots of entire site profiles.
+
+This is particularly useful for:
+- Seasonal content variations (e.g., highlighting different projects)
+- Testing tone and messaging without losing the original
+- Quick rollback if an edit doesn't work out
+
+### File Upload System
+
+#### The problem: "Just use image URLs" doesn't scale
+
+The original Projects schema used `z.string().url()` for images, assuming external hosting. But for a real portfolio CMS, that's friction:
+
+- External hosting adds setup overhead
+- It's easy to accidentally delete images that are still in use
+- No control over image availability or performance
+
+I needed **first-class file upload** integrated into the CMS workflow.
+
+#### Implementation strategy
+
+**Backend (Fastify plugin):**
+
+- `@fastify/multipart` for streaming uploads
+- `@fastify/static` for serving uploaded files
+- REST endpoints for upload/delete (not tRPC, because file streaming)
+- Authentication check on all upload endpoints
+- Automatic file cleanup when content is updated/deleted
+
+**Frontend (React component):**
+
+- `FileUploader` component with drag-and-drop UX
+- Progress tracking via XMLHttpRequest (fetch doesn't support upload progress)
+- Image preview and video icon placeholders
+- Delete/replace functionality
+- File validation (size, type) before upload
+
+**Key detail: Automatic cleanup**
+
+When a project image is updated, the old file must be deleted. I implemented this in the service layer:
+
+```typescript
+// Before update: get old image URL
+const existing = await getProjectById(id);
+if (existing?.image && existing.image !== data.image) {
+  oldImageUrl = existing.image;
+}
+
+// After successful update: delete old file
+if (row && oldImageUrl) {
+  deleteUploadedFile(oldImageUrl);
+}
+```
+
+This prevents orphaned files from accumulating in the uploads directory.
+
+#### Why drag-and-drop matters
+
+The FileUploader component prioritizes **discoverability**:
+
+- Large drop zone with clear visual feedback
+- Click-to-browse fallback for users who don't know about drag-and-drop
+- Instant preview after upload (for images)
+- Progress bar for large files
+- Replace/delete buttons on hover
+
+This makes the CMS feel like a real content management system, not a developer tool.
+
+### Videos Feature
+
+#### Why a separate Videos section
+
+Originally, I considered adding video URLs to Projects. But videos deserve their own space because:
+
+1. **Different content type**: Videos are demos, tutorials, or talks — not always tied to a specific project
+2. **Different metadata**: Videos have duration, thumbnails, and benefit from dedicated preview UI
+3. **Performance**: Video files are large; they need their own upload handling and storage strategy
+
+#### Architecture
+
+**Database schema** (`videos` table):
+- Core fields: `title`, `description`, `videoUrl`, `thumbnailUrl`
+- Metadata: `duration` (seconds), `tags`, `featured`
+- Timestamps: `created_at`, `updated_at`
+- Owner tracking: `owner_id` (foreign key to users)
+
+**Backend service:**
+- CRUD operations mirroring the Projects pattern
+- Automatic cleanup of both video AND thumbnail on delete/update
+- Duration validation (must be positive integer)
+
+**Public page** (`/videos`):
+- Grid layout with video cards
+- Thumbnail preview with duration badge
+- Featured badge for highlighted videos
+- Tag filtering (future enhancement)
+
+**CMS integration:**
+- Videos tab in CMS modal (alongside Home and Projects)
+- Dual FileUploader: one for video, one for thumbnail
+- Video preview with HTML5 player
+- Duration input field (seconds) with validation
+
+#### Why thumbnails are separate uploads
+
+I could auto-generate thumbnails from video frames, but manual thumbnails are better:
+
+- Control over the exact frame shown
+- Can use edited/branded thumbnails
+- Faster page load (don't need to load video for preview)
+
+### What I learned
+
+**File upload is harder than it looks:**
+
+The happy path (upload → save URL → done) is simple. But production-ready uploads need:
+
+- Streaming (don't buffer entire file in memory)
+- Progress feedback (users need to know large files are uploading)
+- Validation (size, type, auth)
+- Cleanup (don't leak files on update/delete)
+- Error handling (network failures, disk space, etc.)
+
+**CMS complexity scales with content types:**
+
+Every new content type (Projects, Site Content, Videos) adds:
+
+- Database schema
+- Backend service with CRUD + validation
+- tRPC router
+- Frontend editor with form, validation, and state management
+- Integration into CMS shell (tabs, dirty state, search)
+
+This is why the CMS architecture matters: consistent patterns make adding new content types mechanical rather than exploratory.
+
+### What's next
+
+Now that the CMS can manage all major content types, the next priorities are:
+
+- [ ] **Video player**: Play videos on the website using a custom built video player
+- [ ] **Video playlists/categories**: Group related videos together
+- [ ] **Image optimization**: Automatic resizing/compression on upload
+- [ ] **Bulk operations**: Delete multiple items, bulk tag editing
+- [ ] **Content preview**: See how changes look before saving
+- [ ] **Audit log**: Track who changed what and when
+
+---
+
 ## Future
 
-- [ ] Add CMS UI to modify Skills & Expertise section on Homepage
+- [x] Add CMS UI to modify Skills & Expertise section on Homepage *(completed 0.2.0)*
 - [ ] Create a new page, *Technology*, where various software tools shown along with links to each tool
 - [ ] Create a new page, *Ideas*, where ideas can easily be unfolded and to keep all ideas in the same location
 - [ ] Add autocompletion in CMS UI (where applicable)
 - [ ] Check if Turborepo can be used to separate build of apps in monorepo and if Vite can still be used for the frontend
+- [ ] Add video playlist/categorization feature
+- [ ] Image optimization on upload
+- [ ] Batch operations in CMS (bulk delete, bulk tag editing)
