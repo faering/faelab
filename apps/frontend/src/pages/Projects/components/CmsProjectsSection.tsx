@@ -410,8 +410,8 @@ export function useCmsProjectsEditor({ onDirtyChange }: CmsProjectsSectionProps)
       )}
 
       {view.kind === 'list' ? (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-slate-100/70 dark:bg-slate-800/30 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-slate-100/70 dark:bg-slate-800/30 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                 <div className="col-span-6">Title</div>
                 <div className="col-span-3">Tools</div>
                 <div className="col-span-1">Featured</div>
@@ -604,9 +604,9 @@ export function useCmsProjectsEditor({ onDirtyChange }: CmsProjectsSectionProps)
                 </div>
               </div>
             </>
-          )
-        }
-          {pendingDelete && (
+          )}
+
+      {pendingDelete && (
         <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
           <button
             type="button"
