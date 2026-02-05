@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import Switcher from './Switcher';
-import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '../trpc/apiBase';
 
 const navLinks = [
@@ -9,6 +9,7 @@ const navLinks = [
   { label: 'About', to: '/#about' },
   { label: 'Skills', to: '/#skills' },
   { label: 'Projects', to: '/#projects' },
+  { label: 'Videos', to: '/videos' },
   { label: 'Contact', to: '/#contact' },
 ];
 
@@ -147,69 +148,91 @@ const Header = () => {
                 const [dropdownOpen, setDropdownOpen] = useState(false);
                 let dropdownTimeout: NodeJS.Timeout | null = null;
 
-                return ['home', 'about', 'skills', 'projects', 'contact'].map((item) =>
-                  item === 'projects' ? (
-                    <div
-                      key={item}
-                      className="relative"
-                      onMouseEnter={() => {
-                        if (dropdownTimeout) clearTimeout(dropdownTimeout);
-                        setDropdownOpen(true);
-                      }}
-                      onMouseLeave={() => {
-                        dropdownTimeout = setTimeout(() => setDropdownOpen(false), 180);
-                      }}
-                    >
+                return navLinks.map((link) => {
+                  const isHashLink = link.to.startsWith('/#');
+                  const sectionId = isHashLink ? link.to.slice(2) : null;
+                  const isProjectsSection = sectionId === 'projects';
+
+                  if (isProjectsSection) {
+                    return (
+                      <div
+                        key={link.label}
+                        className="relative"
+                        onMouseEnter={() => {
+                          if (dropdownTimeout) clearTimeout(dropdownTimeout);
+                          setDropdownOpen(true);
+                        }}
+                        onMouseLeave={() => {
+                          dropdownTimeout = setTimeout(() => setDropdownOpen(false), 180);
+                        }}
+                      >
+                        <Link
+                          to={location.pathname === '/' ? `#${sectionId}` : `/#${sectionId}`}
+                          onClick={e => {
+                            e.preventDefault();
+                            scrollToSection(sectionId!);
+                          }}
+                          className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
+                          style={{ color: 'var(--tw-color-text)' }}
+                        >
+                          <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{link.label}</span>
+                        </Link>
+                        {/* Dropdown menu */}
+                        <div
+                          className={`absolute left-0 top-full mt-2 min-w-[180px] bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg transition-opacity duration-200 z-50 ${dropdownOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                        >
+                          <div className="flex flex-col py-2">
+                            <Link
+                              to={location.pathname === '/' ? '#projects' : '/#projects'}
+                              onClick={e => {
+                                e.preventDefault();
+                                scrollToSection('projects');
+                              }}
+                              className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
+                            >
+                              Featured Projects
+                            </Link>
+                            <Link
+                              to="/projects"
+                              className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
+                            >
+                              All Projects
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isHashLink) {
+                    return (
                       <Link
-                        to={location.pathname === '/' ? `#${item}` : `/#${item}`}
+                        key={link.label}
+                        to={location.pathname === '/' ? `#${sectionId}` : `/#${sectionId}`}
                         onClick={e => {
                           e.preventDefault();
-                          scrollToSection(item);
+                          scrollToSection(sectionId!);
                         }}
                         className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
                         style={{ color: 'var(--tw-color-text)' }}
                       >
-                        <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">Projects</span>
+                        <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{link.label}</span>
                       </Link>
-                      {/* Dropdown menu */}
-                      <div
-                        className={`absolute left-0 top-full mt-2 min-w-[180px] bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg transition-opacity duration-200 z-50 ${dropdownOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-                      >
-                        <div className="flex flex-col py-2">
-                          <Link
-                            to={location.pathname === '/' ? '#projects' : '/#projects'}
-                            onClick={e => {
-                              e.preventDefault();
-                              scrollToSection('projects');
-                            }}
-                            className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
-                          >
-                            Featured Projects
-                          </Link>
-                          <Link
-                            to="/projects"
-                            className="px-5 py-2 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-150 cursor-pointer"
-                          >
-                            All Projects
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
+                    );
+                  }
+
+                  return (
                     <Link
-                      key={item}
-                      to={location.pathname === '/' ? `#${item}` : `/#${item}`}
-                      onClick={e => {
-                        e.preventDefault();
-                        scrollToSection(item);
-                      }}
+                      key={link.label}
+                      to={link.to}
+                      onClick={() => setIsMenuOpen(false)}
                       className="transition-colors duration-200 capitalize font-medium py-2 px-2 cursor-pointer"
                       style={{ color: 'var(--tw-color-text)' }}
                     >
-                      <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{item.charAt(0).toUpperCase() + item.slice(1)}</span>
+                      <span className="transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-300">{link.label}</span>
                     </Link>
-                  )
-                );
+                  );
+                });
               })()}
               </div>
             </div>
@@ -252,20 +275,39 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full backdrop-blur-md shadow-lg" style={{ backgroundColor: 'var(--tw-color-primary)' }}>
             <div className="flex flex-col py-4">
-              {['home', 'about', 'skills', 'projects', 'contact'].map((item) => (
-                <Link
-                  key={item}
-                  to={location.pathname === '/' ? `#${item}` : `/#${item}`}
-                  onClick={e => {
-                    e.preventDefault();
-                    scrollToSection(item);
-                  }}
-                  className="transition-colors duration-200 capitalize font-medium py-2 px-6 text-left"
-                  style={{ color: 'var(--tw-color-text)' }}
-                >
-                  {item}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const isHashLink = link.to.startsWith('/#');
+                const sectionId = isHashLink ? link.to.slice(2) : null;
+
+                if (isHashLink) {
+                  return (
+                    <Link
+                      key={link.label}
+                      to={location.pathname === '/' ? `#${sectionId}` : `/#${sectionId}`}
+                      onClick={e => {
+                        e.preventDefault();
+                        scrollToSection(sectionId!);
+                      }}
+                      className="transition-colors duration-200 capitalize font-medium py-2 px-6 text-left"
+                      style={{ color: 'var(--tw-color-text)' }}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="transition-colors duration-200 capitalize font-medium py-2 px-6 text-left"
+                    style={{ color: 'var(--tw-color-text)' }}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
               {authStatus === 'authenticated' && (
                 <button
                   type="button"
