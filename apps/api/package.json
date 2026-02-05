@@ -14,10 +14,11 @@
     },
     "dependencies": {
         "@fastify/autoload": "^6.3.1",
+        "@fastify/cookie": "^11.0.2",
         "@fastify/cors": "^10.1.0",
         "@fastify/env": "^5.0.3",
-        "@fastify/cookie": "^11.0.2",
         "@fastify/multipart": "^9.4.0",
+        "@fastify/static": "^9.0.0",
         "@portfolio/db": "workspace:*",
         "@portfolio/types": "workspace:*",
         "@trpc/server": "^11.0.0",

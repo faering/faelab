@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 
 import { registerApis } from './registerApis.js';
+import { registerFileUpload } from '../plugins/fileUpload.js';
 import { isDevBypassEnabled } from '../auth/devBypass.js';
 
 export function createServer() {
@@ -47,6 +48,11 @@ export function createServer() {
   if (isDevBypassEnabled()) {
     app.log.warn('AUTH_DEV_BYPASS is enabled (development only). OAuth is bypassed for CMS access.');
   }
+
+  // Register file upload and static file serving
+  app.register(async (instance) => {
+    await registerFileUpload(instance);
+  });
 
   // Register API protocols (tRPC now; REST/GraphQL later)
   app.register(async (instance) => {

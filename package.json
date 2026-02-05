@@ -18,5 +18,12 @@
         "dev:all": "pnpm -r --parallel --if-present dev",
         "build:all": "pnpm -r --if-present build",
         "lint:all": "pnpm -r --if-present lint"
+    },
+    "dependencies": {
+        "@fastify/multipart": "^9.4.0",
+        "@fastify/static": "^9.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^25.0.10"
     }
 }
