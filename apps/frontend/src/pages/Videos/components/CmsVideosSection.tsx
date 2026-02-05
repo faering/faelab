@@ -1,7 +1,6 @@
 import React from 'react';
-import { ChevronLeft, Plus, Trash2, Video as VideoIcon } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
 import type { Video } from '../../../../../../packages/types/videoSchema';
-import CmsUi from '../../../components/CmsUi';
 import FileUploader from '../../../components/FileUploader';
 import { trpc } from '../../../trpc/trpc';
 
@@ -704,21 +703,4 @@ export function useCmsVideosEditor({ onDirtyChange }: CmsVideosSectionProps): Cm
     search: { value: searchTerm, onChange: setSearchTerm, placeholder: 'Search videos…' },
     isDirty: videosIsDirty,
   };
-}
-
-export default function CmsVideosSection({ onDirtyChange }: CmsVideosSectionProps) {
-  const { content, statusBadge, toolbar, search } = useCmsVideosEditor({ onDirtyChange });
-
-  return (
-    <CmsUi
-      title="Videos"
-      subtitle="Create and edit portfolio videos."
-      sections={[{ id: 'videos', label: 'Videos', shortLabel: 'V' }]}
-      activeSectionId="videos"
-      statusBadge={statusBadge}
-      toolbar={toolbar}
-      search={search}
-      renderContent={() => content}
-    />
-  );
 }
