@@ -7,7 +7,7 @@ export const ProjectSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  image: z.string().url().optional(),
+  image: z.string().optional(), // Changed from .url() to support local paths like /uploads/images/...
   tags: z.array(z.string()).optional(),
   techStack: z.array(z.string()).min(1),
   repoUrl: z.string().url().optional(),

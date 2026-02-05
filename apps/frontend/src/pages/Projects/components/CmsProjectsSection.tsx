@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
 import type { Project } from '../../../../../../packages/types/projectSchema';
 import CmsUi from '../../../components/CmsUi';
+import FileUploader from '../../../components/FileUploader';
 import { trpc } from '../../../trpc/trpc';
 
 const CMS_STATE_KEY = 'projectsCmsState';
@@ -564,15 +565,12 @@ export function useCmsProjectsEditor({ onDirtyChange }: CmsProjectsSectionProps)
                     />
                   </label>
 
-                  <label className="block">
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Image URL</div>
-                    <input
-                      value={draft.image ?? ''}
-                      onChange={(e) => setDraft((d) => ({ ...d, image: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-950/30 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-400"
-                      placeholder="https://..."
-                    />
-                  </label>
+                  <FileUploader
+                    type="image"
+                    value={draft.image}
+                    onChange={(url) => setDraft((d) => ({ ...d, image: url || '' }))}
+                    label="Project Image"
+                  />
 
                   <label className="block">
                     <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Repo URL</div>
@@ -606,8 +604,9 @@ export function useCmsProjectsEditor({ onDirtyChange }: CmsProjectsSectionProps)
                 </div>
               </div>
             </>
-          )}
-      {pendingDelete && (
+          )
+        }
+          {pendingDelete && (
         <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
           <button
             type="button"
