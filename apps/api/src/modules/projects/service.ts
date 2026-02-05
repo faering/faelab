@@ -1,5 +1,6 @@
 import { query, queryOne } from '@portfolio/db';
 import type { CreateProjectInput, Project } from '@portfolio/types';
+import { deleteUploadedFile } from '../../utils/fileCleanup.js';
 
 type DbProjectRow = Omit<Project, 'image' | 'tags' | 'repoUrl' | 'liveUrl'> & {
   image: string | null;
@@ -85,6 +86,15 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
 }
 
 export async function updateProject(id: string, data: Partial<Omit<Project, 'id'>>): Promise<Project | null> {
+  // If updating image, get old image URL for cleanup
+  let oldImageUrl: string | undefined;
+  if (data.image !== undefined) {
+    const existing = await getProjectById(id);
+    if (existing?.image && existing.image !== data.image) {
+      oldImageUrl = existing.image;
+    }
+  }
+
   const assignments: string[] = [];
   const values: any[] = [id];
 
@@ -114,10 +124,25 @@ export async function updateProject(id: string, data: Partial<Omit<Project, 'id'
     values,
   );
 
+  // Clean up old image file if update was successful
+  if (row && oldImageUrl) {
+    deleteUploadedFile(oldImageUrl);
+  }
+
   return row ? normalizeProjectRow(row) : null;
 }
 
 export async function deleteProject(id: string): Promise<boolean> {
+  // Get project to retrieve image URL before deletion
+  const project = await getProjectById(id);
+  
   const row = await queryOne<{ id: string }>(`DELETE FROM projects WHERE id = $1 RETURNING id`, [id]);
-  return !!row;
+  const deleted = !!row;
+  
+  // Clean up image file if deletion was successful
+  if (deleted && project?.image) {
+    deleteUploadedFile(project.image);
+  }
+  
+  return deleted;
 }
