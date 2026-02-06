@@ -16,3 +16,7 @@ export type { VideoPlayerProps } from './VideoPlayer';
 // replace this import with the new implementation:
 // export { ReactVideoPlayer as VideoPlayer } from './ReactVideoPlayer';
 export { PlyrVideoPlayer as VideoPlayer } from './PlyrVideoPlayer';
+
+// Export modal and details components
+export { VideoModal } from '../VideoModal/VideoModal';
+export { VideoDetails } from '../VideoModal/VideoDetails';
