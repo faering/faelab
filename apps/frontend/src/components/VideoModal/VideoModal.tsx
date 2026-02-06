@@ -84,7 +84,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ video, isOpen, onClose }
         aria-labelledby="video-modal-title"
       >
         <div
-          className="relative w-full max-w-5xl bg-white dark:bg-gray-800 rounded-lg shadow-2xl pointer-events-auto animate-scale-up overflow-hidden"
+          className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-2xl pointer-events-auto animate-scale-up overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close button */}
@@ -97,7 +97,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ video, isOpen, onClose }
           </button>
 
           {/* Video Player */}
-          <div className="aspect-video bg-black">
+          <div className="w-full flex-shrink-0 aspect-video bg-black">
             <VideoPlayer
               src={videoUrl}
               poster={posterUrl}
@@ -108,7 +108,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ video, isOpen, onClose }
           </div>
 
           {/* Video Details */}
-          <div className="p-6">
+          <div className="flex-1 overflow-y-auto p-6">
             <VideoDetails video={video} />
           </div>
         </div>
