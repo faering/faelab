@@ -66,3 +66,103 @@ html, body, #root {
   /* Muted text */
   --tw-color-text-muted: #a1a1aa;
 }
+
+/**
+ * Plyr Video Player Custom Theming
+ * 
+ * This section customizes the Plyr player to match the site's
+ * color scheme (purple primary with dark mode support).
+ */
+
+/* Light mode - Plyr colors */
+.plyr {
+  --plyr-color-main: #8b5cf6; /* purple-500 */
+  --plyr-badge-background: #6d28d9; /* purple-700 */
+  --plyr-audio-progress-buffered-background: rgba(139, 92, 246, 0.25);
+  --plyr-progress-buffered-background: rgba(139, 92, 246, 0.25);
+}
+
+/* Dark mode - Plyr colors */
+.dark .plyr {
+  --plyr-color-main: #8b5cf6; /* purple-500 - keep same in dark mode */
+  --plyr-badge-background: #7c3aed; /* primary-accent */
+  --plyr-audio-progress-buffered-background: rgba(139, 92, 246, 0.4);
+  --plyr-progress-buffered-background: rgba(139, 92, 246, 0.4);
+  --plyr-control-icon-background: #f3f4f6; /* light text on dark bg */
+}
+
+/**
+ * Plyr enhanced styling
+ * Makes the player controls larger and more prominent
+ */
+.plyr {
+  font-family: inherit;
+}
+
+/* Control buttons - make them more prominent */
+.plyr__controls {
+  padding: 12px;
+}
+
+.plyr__control {
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.plyr__control:hover,
+.plyr__control:focus-visible {
+  transform: scale(1.1);
+  background: var(--plyr-color-main);
+}
+
+/* Progress bar styling */
+.plyr__progress {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.plyr__progress__buffered {
+  background: rgba(139, 92, 246, 0.3);
+}
+
+.plyr__progress__played {
+  background: var(--plyr-color-main);
+}
+
+/* Tooltips and time display */
+.plyr__tooltip {
+  background: var(--plyr-color-main);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Volume slider */
+.plyr__range {
+  accent-color: var(--plyr-color-main);
+}
+
+/* Settings menu */
+.plyr__menu__container {
+  border-radius: 4px;
+}
+
+/* Badge styling */
+.plyr__badge {
+  background: var(--plyr-badge-background);
+  border-radius: 3px;
+  font-weight: 600;
+  padding: 2px 6px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .plyr__controls {
+    padding: 8px;
+  }
+  
+  .plyr__control {
+    width: 36px;
+    height: 36px;
+  }
+}
