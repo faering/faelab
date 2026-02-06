@@ -23,7 +23,7 @@ export default function VideosPage() {
   };
 
   return (
-    <div className="min-h-screen py-20">
+    <div className="min-h-screen py-20 bg-white dark:bg-gray-900">
       <div className="container mx-auto px-6 py-16">
         <h1 className="text-4xl font-bold text-center mb-4 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
           Videos
