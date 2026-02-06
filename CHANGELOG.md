@@ -27,6 +27,22 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
   - CMS integration: Videos section in CMS modal for content management
   - Video preview with HTML5 player and thumbnail support
   - Duration display in MM:SS format
+  - **Professional Video Player**
+    - Custom VideoPlayer abstraction layer (enables easy migration between player libraries)
+    - Plyr-react implementation with full control bar (play, progress, volume, settings, fullscreen)
+    - VideoModal component with full-screen overlay and backdrop blur
+    - VideoDetails component displaying metadata (title, description, duration, tags, published date)
+    - Custom Plyr CSS theming: purple color scheme (purple-500 primary, purple-700 accent)
+    - Dark mode support with automatic theme switching
+    - Responsive modal sizing (90vh max-height, scrollable content)
+- **Video Player Accessibility**
+  - Focus management: auto-focus on modal open, restore focus on close
+  - Focus trap: Tab/Shift+Tab navigation cycles within modal
+  - Full ARIA support: `aria-labelledby`, `aria-describedby`, `aria-modal`, `role="dialog"`
+  - Keyboard shortcuts: ESC to close, Tab to navigate, Enter to activate
+  - Improved close button labels with keyboard hints
+  - Screen reader optimized with semantic HTML and ARIA live regions
+  - Error handling UI foundation with graceful error display
 - tRPC client integration with React Query and API connectivity checks in the CMS.
 - GitHub OAuth admin login (server-side sessions) with optional dev bypass.
 - Configurable auth method (`AUTH_METHOD=local|github`) and local admin login flow.

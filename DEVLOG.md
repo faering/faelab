@@ -421,6 +421,212 @@ Now that the CMS can manage all major content types, the next priorities are:
 
 ---
 
+## 0.1.0 (06-02-2026) — Professional Video Player Implementation
+
+### What I set out to build
+
+The Videos feature existed end-to-end (database, API, page), but videos were displayed as clickable cards with a basic HTML5 player preview. To turn this into a real viewing experience, I needed:
+
+1. **A proper video player** with professional controls (play, progress, volume, speed, fullscreen)
+2. **Modal presentation** so viewers focus on the video without page distractions
+3. **Accessibility** so all users can navigate and watch (keyboard users, screen reader users)
+4. **Future flexibility** so switching player libraries (Plyr → react-player) doesn't require rewriting consuming code
+
+### Why I chose Plyr (not Video.js or custom)
+
+I evaluated four options:
+
+**Video.js** (industry standard):
+- ✓ Mature, heavily used in production
+- ✗ 250KB bundle (large for a portfolio site)
+- ✗ Verbose API and configuration
+
+**Custom HTML5 player**:
+- ✓ Total control, minimal bundle impact
+- ✗ Significant dev time for accessibility + cross-browser quirks
+- ✗ Would need to maintain keyboard/screen reader support manually
+
+**react-player** (unified API):
+- ✓ Supports multiple sources (YouTube, Vimeo, MP4, HLS, etc.)
+- ✓ Simple API and good documentation
+- ✓ Active maintenance
+- ✗ ~100KB bundle (overkill for single MP4 source)
+- ✗ Extra abstraction layer for simple use cases
+- ✗ Less accessibility-focused than Plyr
+
+**Plyr** (lightweight + modern):
+- ✓ Only 20KB (5-6x smaller than Video.js, lighter than react-player)
+- ✓ Excellent accessibility out-of-the-box
+- ✓ Clean, simple API
+- ✓ Built for modern browsers
+- ✗ Smaller ecosystem than Video.js (acceptable for a portfolio)
+
+**Decision**: Plyr. It's the best fit for a portfolio: professional feature set, lightweight, and accessibility-first. The abstraction layer also makes it easy to swap to react-player later if multi-source support becomes a requirement.
+
+### Architecture: 5-phase implementation with modular design
+
+I chose a phased approach because each phase builds independently, making testing and debugging straightforward:
+
+#### Phase 1: Foundation (VideoPlayer abstraction)
+
+Created three files:
+
+1. **VideoPlayer.tsx** - Abstract interface defining the public API
+   ```typescript
+   export interface VideoPlayerProps {
+     src: string;
+     poster?: string;
+     title?: string;
+     autoplay?: boolean;
+     controls?: boolean;
+   }
+   ```
+
+2. **PlyrVideoPlayer.tsx** - Implementation wrapping plyr-react
+   - Configures Plyr with controls, keyboard support, and quality/speed options
+   - Adapts plyr-react to the VideoPlayer interface
+
+3. **index.ts** - Barrel export hiding implementation details
+   - Consumers import `{ VideoPlayer }` from `@/components/VideoPlayer`
+   - Library switch (Plyr → react-player) requires changing only the barrel export
+   - Future migration path is documented in comments
+
+**Why this abstraction matters:**
+
+The consumer (VideoModal) never knows which player library is in use. If we later decide to switch to react-player or custom player, we only change `PlyrVideoPlayer.tsx` and the barrel export. VideoModal needs zero changes.
+
+This is especially important for a portfolio: libraries might go unmaintained, or requirements might change (e.g., need HLS stream support). The abstraction buys flexibility without refactoring consuming code.
+
+#### Phase 2: Modal & Details Components
+
+Created two sibling components:
+
+1. **VideoModal.tsx** - Full-screen overlay with player + metadata
+   - Backdrop with blur effect
+   - Centered modal with responsive sizing (max-w-5xl, max-h-90vh)
+   - Close button with visual feedback
+   - Body scroll lock when open
+
+2. **VideoDetails.tsx** - Reusable metadata display
+   - Title and description
+   - Badges (Featured, Duration)
+   - Tag list with styled pills
+   - Published date
+   - Designed to be reusable on future dedicated video pages
+
+**Architectural note**: VideoDetails is separate from VideoModal because it might be used in other contexts (e.g., a dedicated `/videos/:id` page with a sidebar). Keeping it independent makes future UI expansions easier.
+
+#### Phase 3: Integration with VideosPage
+
+Connected the modal to the VideosPage with state management:
+
+- `selectedVideo` state tracks which video was clicked
+- `isModalOpen` state controls modal visibility
+- Video cards are clickable (added `cursor-pointer` and `onClick` handler)
+- Modal closes via ESC key, backdrop click, or close button
+- 200ms delay on close allows fade animation before clearing selected video
+
+**Key detail**: Auto-opening the modal on card click creates a polished "just works" UX. The modal handles all the ceremony (loading, error states, accessibility).
+
+#### Phase 4: Custom Plyr Theming
+
+Added comprehensive CSS to `index.css` for:
+
+- **Color theming**: Purple primary (matching site palette) in light mode and dark mode
+- **Control styling**: Smooth hover scales, rounded corners, visual feedback
+- **Progress bar**: Purple gradient with buffered progress visualization
+- **Tooltips & badges**: Themed to match the site
+- **Responsive sizing**: Smaller controls on mobile
+
+**Why CSS variables over Tailwind:**
+
+Plyr has deeply nested DOM (progress bar, tooltips, settings menus) that Tailwind can't easily target. Using CSS variables in a custom stylesheet lets us:
+
+- Override Plyr's internal colors consistently
+- Maintain a single source of truth (CSS variables already defined in `:root`)
+- Respect dark mode automatically (`.dark` selector applies both component and Plyr overrides)
+
+#### Phase 5: Accessibility & Keyboard Navigation
+
+This was the most important phase because a video player that only works with a mouse isn't accessible.
+
+**Focus Management:**
+- Auto-focus the close button when modal opens (keyboard users know where they are)
+- Restore focus to the previously focused element when modal closes (maintains navigation flow)
+- Visual focus ring on buttons (not just hover state)
+
+**Focus Trap:**
+- Tab key cycles through focusable elements within the modal
+- Shift+Tab goes backward
+- When Tab reaches the last focusable element, wraps to the first
+- When Shift+Tab reaches the first element, wraps to the last
+
+This prevents keyboard users from accidentally focusing elements outside the modal while it's open.
+
+**ARIA Labels & Attributes:**
+- `role="dialog"` identifies the element as a modal
+- `aria-modal="true"` indicates to screen readers that the rest of the page is inert
+- `aria-labelledby` links the dialog to its title
+- `aria-describedby` links the dialog to its description region
+- Hidden `<h2 id="video-modal-title">` for screen reader users (not displayed visually)
+- `aria-live="polite"` on the details section announces content changes
+
+**Keyboard Shortcuts:**
+- ESC to close (already had this, improved implementation)
+- Tab/Shift+Tab to navigate focusable elements
+- Enter/Space to activate buttons
+- All standard browser keyboard interactions work
+
+**Implementation Note:**
+
+The focus trap required careful event handling:
+
+```typescript
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key !== 'Tab' || !isOpen || !modalRef.current) return;
+
+  const focusableElements = modalRef.current.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+
+  // Wrap at start/end
+};
+```
+
+This ensures keyboard users can't tab outside the modal while it's open.
+
+### What surprised me
+
+**Plyr's default behavior is solid:**
+
+I initially over-engineered the VideoPlayer component with event listeners for `onPlay`, `onPause`, `onEnded`, and `onTimeUpdate`. But VideoModal doesn't need those events—Plyr handles all interaction internally.
+
+Removing unnecessary code made the component simpler and more reliable. This is a reminder that abstractions should only expose what consumers actually need.
+
+**Accessibility requires thoughtful state management:**
+
+The focus trap works because we manage:
+- `previousActiveElement` (store focus before modal opens)
+- Modal ref (query focusable elements within it)
+- Event listeners (capture Tab key and wrap focus)
+
+Without this coordination, keyboard navigation feels broken. With it, the modal feels as polished as any desktop application.
+
+### What's next
+
+The video player is production-ready. Future enhancements:
+
+- [ ] Dedicated `/videos/:id` page with URL-shareable video links
+- [ ] Video playlists/categories sidebar
+- [ ] Video analytics (view count, watch time heatmap)
+- [ ] Related videos recommendations
+- [ ] Transcript/caption support
+- [ ] Custom player skins for different site sections
+
+The abstraction layer makes all of these possible without refactoring the core player component.
+
+---
+
 ## Future
 
 - [x] Add CMS UI to modify Skills & Expertise section on Homepage *(completed 0.2.0)*
