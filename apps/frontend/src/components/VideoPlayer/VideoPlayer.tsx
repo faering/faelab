@@ -27,18 +27,6 @@ export interface VideoPlayerProps {
   /** Show player controls */
   controls?: boolean;
   
-  /** Callback when video starts playing */
-  onPlay?: () => void;
-  
-  /** Callback when video is paused */
-  onPause?: () => void;
-  
-  /** Callback when video ends */
-  onEnded?: () => void;
-  
-  /** Callback with current time updates (in seconds) */
-  onTimeUpdate?: (currentTime: number) => void;
-  
   /** Additional CSS classes */
   className?: string;
 }

@@ -1,9 +1,26 @@
-import React from 'react';
+import { useState } from 'react';
 import { trpc } from '../../trpc/trpc';
+import { VideoModal } from '../../components/VideoPlayer';
 import type { Video } from '../../../../../packages/types/videoSchema';
 
 export default function VideosPage() {
   const { data: videos, isLoading, isError } = trpc.videos.list.useQuery();
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleVideoClick = (video: Omit<Video, 'createdAt' | 'updatedAt'> & {
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+  }) => {
+    setSelectedVideo(video as any);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    // Optionally clear selected video after modal closes
+    setTimeout(() => setSelectedVideo(null), 200);
+  };
 
   return (
     <div className="min-h-screen py-20">
@@ -38,7 +55,8 @@ export default function VideosPage() {
             {videos.map((video) => (
               <div
                 key={video.id}
-                className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-gray-900 hover:shadow-xl transition-shadow"
+                onClick={() => handleVideoClick(video)}
+                className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-gray-900 hover:shadow-xl transition-shadow cursor-pointer"
               >
                 {/* Video thumbnail or video element */}
                 <div className="relative aspect-video bg-slate-100 dark:bg-slate-800">
@@ -92,6 +110,13 @@ export default function VideosPage() {
             ))}
           </div>
         )}
+
+        {/* Video Modal */}
+        <VideoModal
+          video={selectedVideo}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
       </div>
     </div>
   );

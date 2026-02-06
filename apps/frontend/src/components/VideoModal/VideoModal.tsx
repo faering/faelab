@@ -3,9 +3,13 @@ import { X } from 'lucide-react';
 import type { Video } from '../../../../../packages/types/videoSchema';
 import { VideoPlayer } from '../VideoPlayer/index';
 import { VideoDetails } from './VideoDetails';
+import { getApiBaseUrl } from '../../trpc/apiBase';
 
 interface VideoModalProps {
-  video: Video | null;
+  video: (Omit<Video, 'createdAt' | 'updatedAt'> & {
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+  }) | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -51,15 +55,16 @@ export const VideoModal: React.FC<VideoModalProps> = ({ video, isOpen, onClose }
   // Don't render if not open or no video
   if (!isOpen || !video) return null;
 
-  // Build the full video URL (assuming API serves static files at /uploads/...)
+  // Build the full video URL using the same base URL as API calls
+  const apiBaseUrl = getApiBaseUrl();
   const videoUrl = video.videoUrl.startsWith('http') 
     ? video.videoUrl 
-    : `http://localhost:3000${video.videoUrl}`;
+    : `${apiBaseUrl}${video.videoUrl}`;
   
   const posterUrl = video.thumbnailUrl?.startsWith('http')
     ? video.thumbnailUrl
     : video.thumbnailUrl 
-      ? `http://localhost:3000${video.thumbnailUrl}`
+      ? `${apiBaseUrl}${video.thumbnailUrl}`
       : undefined;
 
   return (

@@ -18,7 +18,10 @@ function formatDuration(seconds: number | undefined): string {
 }
 
 interface VideoDetailsProps {
-  video: Video;
+  video: Omit<Video, 'createdAt' | 'updatedAt'> & {
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+  };
   className?: string;
 }
 
