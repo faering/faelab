@@ -1,5 +1,5 @@
 import { Heart } from 'lucide-react';
-import { portfolioConfig } from '../config/portfolio';
+import { portfolioConfig } from '../config/portfolioExample';
 
 const Footer = () => {
   return (

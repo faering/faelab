@@ -1,6 +1,6 @@
 import { ExternalLink, Star } from 'lucide-react';
 import GitHubIcon from '../../icons/GitHub Mark/SVG/GitHub_Invertocat_Black.svg';
-import { portfolioConfig } from '../config/portfolio';
+import { portfolioConfig } from '../config/portfolioExample';
 
 
 export const projects = [

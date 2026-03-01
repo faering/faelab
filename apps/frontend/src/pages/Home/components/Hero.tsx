@@ -3,7 +3,7 @@ import GitHubIconBlack from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat
 import GitHubIconWhite from '../../../../icons/GitHub Mark/SVG/GitHub_Invertocat_White.svg';
 import LinkedInIconBlack from '../../../../icons/in-logo/InBug-Black.png';
 import LinkedInIconWhite from '../../../../icons/in-logo/InBug-White.png';
-import { portfolioConfig } from '../../../config/portfolio';
+import { portfolioConfig } from '../../../config/portfolioExample';
 import type { SiteProfile } from '../../../../../../packages/types/siteContentSchema';
 
 type HeroProps = {

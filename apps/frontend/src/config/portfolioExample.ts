@@ -1,5 +1,5 @@
 export const portfolioConfig = {
-  name: 'Mattias Holm Andersen',
+  name: 'John Doe',
   email: 'me@example.com',
   phone: '+100 123 4567',
   location: 'City, Country',
