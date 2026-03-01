@@ -1,5 +1,5 @@
 {
-    "name": "@portfolio/frontend",
+    "name": "@faelab/frontend",
     "private": true,
     "version": "0.1.0-alpha",
     "type": "module",
@@ -29,7 +29,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.9.1",
-        "@portfolio/api": "workspace:*",
+        "@faelab/api": "workspace:*",
         "@types/react": "^18.3.5",
         "@types/react-dom": "^18.3.0",
         "@vitejs/plugin-react": "^4.3.1",
