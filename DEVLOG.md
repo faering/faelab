@@ -627,6 +627,114 @@ The abstraction layer makes all of these possible without refactoring the core p
 
 ---
 
+---
+
+## 0.1.0 (27-02-2026) — Project Rename: portfolio → faelab
+
+### A name that fits
+
+The project started as a simple portfolio site, but at some point it quietly became something more than that — a full-stack platform with a CMS, file uploads, video hosting, authentication, and a proper data layer. Calling it "portfolio" had started to feel wrong.
+
+`faelab` felt right: something personal, memorable, and not self-limiting. It doesn't describe a use case; it describes a place where things are built.
+
+The rename happened before production deployment, which was exactly the right moment. Once a domain, Docker images, and nginx configs are in place, names become expensive to change. Doing it here meant touching:
+
+- The GitHub repository name
+- Docker container names (`faelab_postgres`, `faelab_api`, etc.)
+- TypeScript internal imports and workspace package references
+- Default content values that still said "portfolio" in example text
+
+It's a small change in scope but a meaningful one in intent. The project now has a name that can grow with it.
+
+---
+
+## 0.1.0 (01-03-2026) — Production Infrastructure: Docker, Nginx, and Secrets
+
+### What I set out to do
+
+Everything had been running locally. The app worked, the CMS worked, uploads worked — but none of it existed anywhere except a development machine. The missing piece was an infrastructure layer that could run this on a real VPS.
+
+The goal for today: containerize the full stack and wire it up for deployment on a Hetzner server sitting behind Cloudflare.
+
+### Restructuring Docker Compose
+
+The existing `docker-compose.yml` only handled Postgres and pgAdmin. I extended it to cover the full production topology, but with a structure that keeps environment-specific concerns out of the base file:
+
+**Base** (`docker-compose.yml`) defines only what's always true: Postgres, pgAdmin, named volumes, and the network topology. It doesn't expose any ports. It doesn't define the application services. It's stable.
+
+**Dev override** (`docker-compose.dev.yml`) exposes Postgres and pgAdmin ports directly to the host — but doesn't add `api` or `frontend`. In dev, those run natively with `pnpm dev` for hot-reload. Docker is only for infrastructure.
+
+**Prod override** (`docker-compose.prod.yml`) adds nginx, frontend, and api with `restart: unless-stopped`. Only ports 80 and 443 are publicly exposed, through nginx. Postgres and pgAdmin are bound to `127.0.0.1` only — accessible via SSH tunnel, invisible to the internet.
+
+The usage is explicit:
+```
+# Local dev
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### The network split matters
+
+I defined two Docker networks: `web` and `internal`.
+
+`internal: true` means no gateway to the outside internet — containers on that network can only talk to each other. Postgres lives here. It is physically unreachable from anywhere outside the cluster, regardless of firewall rules, because the network itself has no route out.
+
+The API sits in *both* networks: it needs to reach Postgres (`internal`) and receive HTTP traffic from nginx (`web`). nginx and the frontend sit in `web` only.
+
+One hard-won lesson: on Docker Desktop / WSL2, port bindings on `internal` networks fail silently. The containers start, the command succeeds, but traffic never arrives. Moving Postgres and pgAdmin onto an ordinary bridge network for the dev override was the fix. This behaviour is technically correct — the internal network has no host gateway by design — but the silence makes it feel like a bug.
+
+### Dockerfiles for a monorepo
+
+Both apps live in a pnpm monorepo with `workspace:*` dependencies. This creates a Dockerfile constraint: each app's build context must include the full monorepo, not just the app directory, because `packages/db` and `packages/types` are dependencies that live at the workspace root.
+
+**API** (2-stage):
+1. Copy manifests → `pnpm install --frozen-lockfile` — this layer caches until the lockfile changes, not until any source file changes
+2. Copy source → run directly with `tsx` — no TypeScript compile step because `noEmit: true` in tsconfig; the source *is* the runtime
+
+**Frontend** (2-stage):
+1. Copy manifests + source → `pnpm build` — Vite compiles to a static `dist/`
+2. `nginx:alpine` serves the `dist/` folder with a custom config that rewrites all paths to `index.html` so client-side routing works
+
+The frontend image bakes `VITE_API_BASE_URL` in at build time via a build `ARG`. This is a Vite constraint: `import.meta.env.VITE_*` is statically replaced at compile time. There is no mechanism to inject these values into a pre-built bundle at runtime. The implication is real: the frontend Docker image is environment-specific. One image per target, not one image deployed everywhere. Worth knowing up front.
+
+### Secrets: the `_FILE` convention
+
+Storing secrets as plain environment variables in `docker-compose.yml` is problematic — they show up in `docker inspect`, logs, and shell history. Docker secrets mount files at `/run/secrets/<name>`, but applications typically expect environment variables, not file paths.
+
+I implemented a secrets loader in `env.ts` that bridges this gap using the `_FILE` suffix convention:
+
+```typescript
+// Any env var ending in _FILE is treated as a path to a secrets file.
+// AUTH_ADMIN_PASSWORD_FILE=/run/secrets/auth_admin_password
+// → process.env.AUTH_ADMIN_PASSWORD = <file contents>
+```
+
+The loader runs after `dotenv` so local `.env` values always take precedence. If there's no `.env` file at all (as in a Docker container), it fails gracefully and the secrets come from Docker's mounted files instead.
+
+This means the application code is completely unaware of how secrets are delivered. The same env var names work in local dev (`.env` file), in CI (plain env vars), and in production (Docker secrets via `_FILE` loader). No conditional logic in application code, no different code paths per environment.
+
+### Nginx: routing and Cloudflare
+
+The nginx container inside the cluster handles path-based routing to the right service:
+
+- `/trpc`, `/auth`, `/api`, `/uploads` → `api:3001`
+- Everything else → `frontend:80`
+
+Since Cloudflare terminates TLS before the request reaches the VPS, nginx only needs to listen on port 80 inside the cluster. `real_ip_header CF-Connecting-IP` restores the actual visitor IP from Cloudflare's header so the API logs and rate-limiting see real addresses instead of Cloudflare proxy IPs.
+
+Two configuration details that would cause subtle production bugs if missed:
+
+- `client_max_body_size 110m` — without this, nginx silently rejects video uploads (up to 100MB) with a 413 before the request reaches the API
+- `proxy_cache_valid 200 1d` on the `/uploads` location — images and videos don't change after upload, so caching them at the proxy layer reduces load on the API for repeat requests
+
+### What's next
+
+The infrastructure is in place. The next step is actually deploying — provisioning the Hetzner VPS, configuring DNS via Cloudflare, and running the prod compose stack for the first time.
+
+The remaining rough edge is the nginx HTTPS block: the config currently redirects all port 80 traffic to HTTPS but the 443 server block is a placeholder. This needs to be completed before the first real deployment with traffic.
+
 ## Future
 
 - [x] Add CMS UI to modify Skills & Expertise section on Homepage *(completed 0.2.0)*
