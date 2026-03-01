@@ -22,11 +22,7 @@ services:
 
   # ── Frontend ──────────────────────────────────────────────────────────────
   frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?VITE_API_BASE_URL is required}
+    image: ghcr.io/faering/faelab/frontend:${IMAGE_TAG:?IMAGE_TAG is required}
     container_name: faelab_frontend
     restart: unless-stopped
     networks:
@@ -34,9 +30,7 @@ services:
 
   # ── API (Fastify + tRPC) ───────────────────────────────────────────────────
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/faering/faelab/api:${IMAGE_TAG:?IMAGE_TAG is required}
     container_name: faelab_api
     restart: unless-stopped
     environment:
