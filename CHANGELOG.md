@@ -8,6 +8,15 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ### Added
 
+- **Production infrastructure**
+  - Multi-stage Dockerfiles for `apps/api` and `apps/frontend` with monorepo-aware build contexts
+  - Docker Compose overlay structure: base (`docker-compose.yml`), dev (`docker-compose.dev.yml`), prod (`docker-compose.prod.yml`)
+  - `web` / `internal` Docker network split: Postgres is air-gapped on an `internal: true` network with no outside route
+  - nginx reverse proxy container for production: path-based routing (`/trpc`, `/auth`, `/api`, `/uploads` → API; catch-all → frontend), `client_max_body_size 110m` for video uploads, `CF-Connecting-IP` passthrough for Cloudflare deployments
+  - nginx config inside the frontend container to serve the Vite static build and rewrite all paths to `index.html` for client-side routing
+  - Docker secrets support: `_FILE` convention loader in `env.ts` maps `*_FILE` env vars to their base name by reading the file at runtime — works transparently across local `.env`, CI plain env vars, and Docker secrets
+  - `.env.example` files for `apps/api` and root documenting all required environment variables
+  - `.dockerignore` to exclude `node_modules`, uploads, and secrets from build context
 - **Site Content Management System**
   - Full CMS for homepage content (Hero, About, Skills sections)
   - Database-backed site profiles with CRUD operations via tRPC
@@ -53,23 +62,20 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ### Changed
 
+- Project renamed from `portfolio` to `faelab` — repository, container names, TypeScript imports, and default content values updated throughout.
 - Featured and Projects pages now load projects from the database (tRPC) instead of local static data.
 - CMS save/delete now return to the list view by default.
-- CMS now includes three main sections: Home, Projects, and Videos
-- Projects CMS now uses FileUploader component for image uploads
-- Navigation header includes Videos link between Projects and Contact
+- CMS now includes three main sections: Home, Projects, and Videos.
+- Projects CMS now uses FileUploader component for image uploads.
+- Navigation header includes Videos link between Projects and Contact.
 
 ### Fixed
 
+- Docker Compose dev override now moves Postgres and pgAdmin off the `internal` network onto an ordinary bridge network, fixing silent port-binding failures on Docker Desktop / WSL2.
 - CORS + cookie handling for browser-based API requests.
-- File cleanup prevents orphaned uploads when content is updated or deleted
-
-### Remaining
-
-- Wire up the contact form to a real delivery mechanism (email service / backend).
-- Improve accessibility and keyboard navigation across interactive controls.
-- Build a video player to watch videos on the website
-- Add video playlist/categorization feature
+- File cleanup prevents orphaned uploads when content is updated or deleted.
+- Removed leftover `ALTER TABLE` migration fragment from `migrations.sql`.
+- Added debug logging to the authentication flow to improve diagnosability.
 
 ## [0.1.0-alpha] - 2026-01-24
 
@@ -115,5 +121,6 @@ First public alpha of the portfolio site: core pages, theme system, and a fully 
 - Contact form currently resets locally and logs to the console; it is not wired to an email/back-end service yet.
 - Projects have to be manually added in `src/data/Projects.tsx` (CMS upcoming in future release)
 
-[Unreleased]: https://github.com/faering/portfolio-website/compare/0.1.0-alpha...HEAD
-[0.1.0-alpha]: https://github.com/faering/portfolio-website/releases/tag/0.1.0-alpha
+[Unreleased]: https://github.com/faering/faelab/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/faering/faelab/compare/0.1.0-alpha...v0.1.0
+[0.1.0-alpha]: https://github.com/faering/faelab/releases/tag/0.1.0-alpha
