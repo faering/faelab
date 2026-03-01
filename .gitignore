@@ -19,6 +19,11 @@ dist
 dist-ssr
 *.local
 
+# Uploaded files (but keep directory structure)
+apps/api/uploads/*
+!apps/api/uploads/images/.gitkeep
+!apps/api/uploads/videos/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

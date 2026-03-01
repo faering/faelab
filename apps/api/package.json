@@ -1,0 +1,36 @@
+{
+    "name": "@portfolio/api",
+    "private": true,
+    "type": "module",
+    "types": "./src/trpc/contract.ts",
+    "exports": {
+        "./trpc": {
+            "types": "./src/trpc/contract.ts",
+            "default": "./src/trpc/contract.ts"
+        }
+    },
+    "scripts": {
+        "dev": "tsx watch src/index.ts"
+    },
+    "dependencies": {
+        "@fastify/autoload": "^6.3.1",
+        "@fastify/cookie": "^11.0.2",
+        "@fastify/cors": "^10.1.0",
+        "@fastify/env": "^5.0.3",
+        "@fastify/multipart": "^9.4.0",
+        "@fastify/static": "^9.0.0",
+        "@portfolio/db": "workspace:*",
+        "@portfolio/types": "workspace:*",
+        "@trpc/server": "^11.0.0",
+        "dotenv": "^16.6.1",
+        "dotenv-expand": "^12.0.3",
+        "fastify": "^5.7.1",
+        "fastify-plugin": "^5.1.0",
+        "zod": "^3.23.8"
+    },
+    "devDependencies": {
+        "@types/node": "^25.0.10",
+        "tsx": "^4.21.0",
+        "typescript": "^5.5.3"
+    }
+}

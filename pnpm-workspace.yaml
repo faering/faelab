@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  # Exclusions (pnpm will ignore these when scanning)
+  - "!**/dist/**"
+  - "!**/build/**"
+  - "!**/.next/**"
+  - "!**/.turbo/**"
+  - "!**/.vite/**"
+  - "!**/node_modules/**"

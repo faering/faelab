@@ -6,9 +6,70 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
-- Add more real project entries and replace placeholder project data.
+### Added
+
+- **Site Content Management System**
+  - Full CMS for homepage content (Hero, About, Skills sections)
+  - Database-backed site profiles with CRUD operations via tRPC
+  - Profile presets system: save and load multiple site configurations
+  - Real-time preview of content changes in CMS
+- **File Upload System**
+  - Drag-and-drop file uploader component for images and videos
+  - Backend multipart file handling with `@fastify/multipart`
+  - Static file serving for uploaded assets at `/uploads/images/*` and `/uploads/videos/*`
+  - Automatic file cleanup when updating or deleting content
+  - Upload validation: 5MB max for images, 100MB max for videos
+  - Support for JPEG, PNG, WebP, GIF images and MP4, WebM, MOV videos
+- **Videos Feature**
+  - Database schema for videos table (title, description, videoUrl, thumbnailUrl, duration, tags, featured)
+  - Complete CRUD API via tRPC for video management
+  - Public Videos page (`/videos`) with grid layout and video cards
+  - CMS integration: Videos section in CMS modal for content management
+  - Video preview with HTML5 player and thumbnail support
+  - Duration display in MM:SS format
+  - **Professional Video Player**
+    - Custom VideoPlayer abstraction layer (enables easy migration between player libraries)
+    - Plyr-react implementation with full control bar (play, progress, volume, settings, fullscreen)
+    - VideoModal component with full-screen overlay and backdrop blur
+    - VideoDetails component displaying metadata (title, description, duration, tags, published date)
+    - Custom Plyr CSS theming: purple color scheme (purple-500 primary, purple-700 accent)
+    - Dark mode support with automatic theme switching
+    - Responsive modal sizing (90vh max-height, scrollable content)
+- **Video Player Accessibility**
+  - Focus management: auto-focus on modal open, restore focus on close
+  - Focus trap: Tab/Shift+Tab navigation cycles within modal
+  - Full ARIA support: `aria-labelledby`, `aria-describedby`, `aria-modal`, `role="dialog"`
+  - Keyboard shortcuts: ESC to close, Tab to navigate, Enter to activate
+  - Improved close button labels with keyboard hints
+  - Screen reader optimized with semantic HTML and ARIA live regions
+  - Error handling UI foundation with graceful error display
+- tRPC client integration with React Query and API connectivity checks in the CMS.
+- GitHub OAuth admin login (server-side sessions) with optional dev bypass.
+- Configurable auth method (`AUTH_METHOD=local|github`) and local admin login flow.
+- Database-backed users and sessions tables for future multi-user support.
+- Projects CMS now uses database-backed CRUD via tRPC.
+- CMS search bar for quick project filtering.
+- Projects page search + sort (Funnel dropdown).
+
+### Changed
+
+- Featured and Projects pages now load projects from the database (tRPC) instead of local static data.
+- CMS save/delete now return to the list view by default.
+- CMS now includes three main sections: Home, Projects, and Videos
+- Projects CMS now uses FileUploader component for image uploads
+- Navigation header includes Videos link between Projects and Contact
+
+### Fixed
+
+- CORS + cookie handling for browser-based API requests.
+- File cleanup prevents orphaned uploads when content is updated or deleted
+
+### Remaining
+
 - Wire up the contact form to a real delivery mechanism (email service / backend).
 - Improve accessibility and keyboard navigation across interactive controls.
+- Build a video player to watch videos on the website
+- Add video playlist/categorization feature
 
 ## [0.1.0-alpha] - 2026-01-24
 

@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: portfolio_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portfolio}
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data/pgdata
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+    - "5050:80"
+    depends_on:
+    - postgres
+    volumes:
+    - pgadmin_data:/var/lib/pgadmin
+volumes:
+  postgres_data:
+  pgdata:
+  pgadmin_data:
