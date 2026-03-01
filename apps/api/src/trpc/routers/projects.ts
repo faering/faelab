@@ -5,7 +5,7 @@ import {
   DeleteProjectInputSchema,
   ProjectSchema,
   UpdateProjectInputSchema,
-} from '@portfolio/types';
+} from '@faelab/types';
 import {
   createProject,
   deleteProject,

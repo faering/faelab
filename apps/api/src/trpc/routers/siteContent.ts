@@ -8,7 +8,7 @@ import {
   SiteContentPresetUpdateInputSchema,
   SiteContentPresetSchema,
   SiteContentPresetSummarySchema,
-} from '@portfolio/types';
+} from '@faelab/types';
 
 import {
   createSiteContentPreset,

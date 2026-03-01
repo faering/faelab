@@ -1,4 +1,4 @@
-import { pool, query, queryOne } from '@portfolio/db';
+import { pool, query, queryOne } from '@faelab/db';
 import type {
   AboutBadge,
   AboutHighlight,
@@ -14,7 +14,7 @@ import type {
   SkillCategory,
   SkillItem,
   SkillTechnology,
-} from '@portfolio/types';
+} from '@faelab/types';
 
 type DbSiteProfileRow = {
   id: string;

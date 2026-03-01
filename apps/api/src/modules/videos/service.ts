@@ -1,5 +1,5 @@
-import { query, queryOne } from '@portfolio/db';
-import type { CreateVideoInput, Video } from '@portfolio/types';
+import { query, queryOne } from '@faelab/db';
+import type { CreateVideoInput, Video } from '@faelab/types';
 import { deleteUploadedFile, deleteUploadedFiles } from '../../utils/fileCleanup.js';
 
 type DbVideoRow = Omit<Video, 'videoUrl' | 'thumbnailUrl' | 'tags' | 'duration' | 'createdAt' | 'updatedAt'> & {

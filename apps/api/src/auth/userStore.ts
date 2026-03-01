@@ -1,4 +1,4 @@
-import { queryOne } from '@portfolio/db';
+import { queryOne } from '@faelab/db';
 
 export type UserRecord = {
   id: string;
