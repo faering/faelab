@@ -627,6 +627,321 @@ The abstraction layer makes all of these possible without refactoring the core p
 
 ---
 
+---
+
+## 0.1.0 (27-02-2026) — Project Rename: portfolio → faelab
+
+### A name that fits
+
+The project started as a simple portfolio site, but at some point it quietly became something more than that — a full-stack platform with a CMS, file uploads, video hosting, authentication, and a proper data layer. Calling it "portfolio" had started to feel wrong.
+
+`faelab` felt right: something personal, memorable, and not self-limiting. It doesn't describe a use case; it describes a place where things are built.
+
+The rename happened before production deployment, which was exactly the right moment. Once a domain, Docker images, and nginx configs are in place, names become expensive to change. Doing it here meant touching:
+
+- The GitHub repository name
+- Docker container names (`faelab_postgres`, `faelab_api`, etc.)
+- TypeScript internal imports and workspace package references
+- Default content values that still said "portfolio" in example text
+
+It's a small change in scope but a meaningful one in intent. The project now has a name that can grow with it.
+
+---
+
+## 0.1.0 (01-03-2026) — Production Infrastructure: Docker, Nginx, and Secrets
+
+### What I set out to do
+
+Everything had been running locally. The app worked, the CMS worked, uploads worked — but none of it existed anywhere except a development machine. The missing piece was an infrastructure layer that could run this on a real VPS.
+
+The goal for today: containerize the full stack and wire it up for deployment on a Hetzner server sitting behind Cloudflare.
+
+### Restructuring Docker Compose
+
+The existing `docker-compose.yml` only handled Postgres and pgAdmin. I extended it to cover the full production topology, but with a structure that keeps environment-specific concerns out of the base file:
+
+**Base** (`docker-compose.yml`) defines only what's always true: Postgres, pgAdmin, named volumes, and the network topology. It doesn't expose any ports. It doesn't define the application services. It's stable.
+
+**Dev override** (`docker-compose.dev.yml`) exposes Postgres and pgAdmin ports directly to the host — but doesn't add `api` or `frontend`. In dev, those run natively with `pnpm dev` for hot-reload. Docker is only for infrastructure.
+
+**Prod override** (`docker-compose.prod.yml`) adds nginx, frontend, and api with `restart: unless-stopped`. Only ports 80 and 443 are publicly exposed, through nginx. Postgres and pgAdmin are bound to `127.0.0.1` only — accessible via SSH tunnel, invisible to the internet.
+
+The usage is explicit:
+```
+# Local dev
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### The network split matters
+
+I defined two Docker networks: `web` and `internal`.
+
+`internal: true` means no gateway to the outside internet — containers on that network can only talk to each other. Postgres lives here. It is physically unreachable from anywhere outside the cluster, regardless of firewall rules, because the network itself has no route out.
+
+The API sits in *both* networks: it needs to reach Postgres (`internal`) and receive HTTP traffic from nginx (`web`). nginx and the frontend sit in `web` only.
+
+One hard-won lesson: on Docker Desktop / WSL2, port bindings on `internal` networks fail silently. The containers start, the command succeeds, but traffic never arrives. Moving Postgres and pgAdmin onto an ordinary bridge network for the dev override was the fix. This behaviour is technically correct — the internal network has no host gateway by design — but the silence makes it feel like a bug.
+
+### Dockerfiles for a monorepo
+
+Both apps live in a pnpm monorepo with `workspace:*` dependencies. This creates a Dockerfile constraint: each app's build context must include the full monorepo, not just the app directory, because `packages/db` and `packages/types` are dependencies that live at the workspace root.
+
+**API** (2-stage):
+1. Copy manifests → `pnpm install --frozen-lockfile` — this layer caches until the lockfile changes, not until any source file changes
+2. Copy source → run directly with `tsx` — no TypeScript compile step because `noEmit: true` in tsconfig; the source *is* the runtime
+
+**Frontend** (2-stage):
+1. Copy manifests + source → `pnpm build` — Vite compiles to a static `dist/`
+2. `nginx:alpine` serves the `dist/` folder with a custom config that rewrites all paths to `index.html` so client-side routing works
+
+The frontend image bakes `VITE_API_BASE_URL` in at build time via a build `ARG`. This is a Vite constraint: `import.meta.env.VITE_*` is statically replaced at compile time. There is no mechanism to inject these values into a pre-built bundle at runtime. The implication is real: the frontend Docker image is environment-specific. One image per target, not one image deployed everywhere. Worth knowing up front.
+
+### Secrets: the `_FILE` convention
+
+Storing secrets as plain environment variables in `docker-compose.yml` is problematic — they show up in `docker inspect`, logs, and shell history. Docker secrets mount files at `/run/secrets/<name>`, but applications typically expect environment variables, not file paths.
+
+I implemented a secrets loader in `env.ts` that bridges this gap using the `_FILE` suffix convention:
+
+```typescript
+// Any env var ending in _FILE is treated as a path to a secrets file.
+// AUTH_ADMIN_PASSWORD_FILE=/run/secrets/auth_admin_password
+// → process.env.AUTH_ADMIN_PASSWORD = <file contents>
+```
+
+The loader runs after `dotenv` so local `.env` values always take precedence. If there's no `.env` file at all (as in a Docker container), it fails gracefully and the secrets come from Docker's mounted files instead.
+
+This means the application code is completely unaware of how secrets are delivered. The same env var names work in local dev (`.env` file), in CI (plain env vars), and in production (Docker secrets via `_FILE` loader). No conditional logic in application code, no different code paths per environment.
+
+### Nginx: routing and Cloudflare
+
+The nginx container inside the cluster handles path-based routing to the right service:
+
+- `/trpc`, `/auth`, `/api`, `/uploads` → `api:3001`
+- Everything else → `frontend:80`
+
+Since Cloudflare terminates TLS before the request reaches the VPS, nginx only needs to listen on port 80 inside the cluster. `real_ip_header CF-Connecting-IP` restores the actual visitor IP from Cloudflare's header so the API logs and rate-limiting see real addresses instead of Cloudflare proxy IPs.
+
+Two configuration details that would cause subtle production bugs if missed:
+
+- `client_max_body_size 110m` — without this, nginx silently rejects video uploads (up to 100MB) with a 413 before the request reaches the API
+- `proxy_cache_valid 200 1d` on the `/uploads` location — images and videos don't change after upload, so caching them at the proxy layer reduces load on the API for repeat requests
+
+### What's next
+
+The infrastructure is in place. The next step is actually deploying — provisioning the Hetzner VPS, configuring DNS via Cloudflare, and running the prod compose stack for the first time.
+
+The remaining rough edge is the nginx HTTPS block: the config currently redirects all port 80 traffic to HTTPS but the 443 server block is a placeholder. This needs to be completed before the first real deployment with traffic.
+
+---
+
+## 0.1.0 (01-03-2026) — CI/CD: Build, Push, and Deploy via GitHub Actions
+
+### What I set out to do
+
+With the infrastructure layer done, the remaining gap was the delivery pipeline: how does a commit on `main` become a running container on the VPS without manual steps?
+
+The goal was a fully automated path from `git push` to running containers, with a clear separation between staging (automatic) and production (intentional, gated).
+
+### Versioning strategy: unified semver on git tags
+
+Because `api` and `frontend` are deployed together from the same compose file, they share a single version. Individual package versions in each `package.json` exist for tooling purposes but don't drive the image tagging.
+
+**Git tags are the source of truth for production releases.** Pushing `v1.2.3` produces semver-tagged images. Pushing to `main` produces `main` + `sha-*` tagged images for staging. There's no automation that derives version numbers — versions are explicit, intentional acts.
+
+This approach was chosen over per-service versioning because it matches how the stack is actually deployed: as a unit. A compatibility matrix between `api:x.y.z` and `frontend:a.b.c` would add overhead with no benefit for a single-owner monorepo.
+
+### Build workflow (`build.yml`)
+
+Triggers:
+- Push to `main` → staging-grade build
+- Push of a `v*.*.*` tag → production-grade build
+
+Both `api` and `frontend` are built in parallel using a matrix strategy. `fail-fast: false` means one service failing mid-push doesn't cancel the other.
+
+Image tagging is handled by `docker/metadata-action`, which derives tags from git context:
+
+| Trigger | Tags produced |
+|---|---|
+| `v1.2.3` tag | `1.2.3`, `1.2`, `1`, `latest`, `sha-a1b2c3d` |
+| `main` push | `main`, `sha-a1b2c3d` |
+
+The SHA tag is always included, on both paths. It's what staging actually deploys — an immutable reference to a specific build, not a mutable `main` pointer.
+
+**`VITE_API_BASE_URL` is environment-specific at build time**, not runtime. Because Vite statically substitutes `import.meta.env.VITE_*` into the bundle, it must be baked in when the image is built. A `Resolve build args` step selects the right URL based on whether the trigger is a tag (prod URL) or a branch push (staging URL), sourced from repository-level variables:
+
+- `STAGING_API_BASE_URL` — e.g. `https://staging.domain.com`
+- `PROD_API_BASE_URL` — e.g. `https://domain.com`
+
+This means the frontend image is environment-specific by design — one image targets staging, another targets prod. This isn't a workaround; it's a consequence of how Vite works, documented explicitly.
+
+Layer caching uses GitHub Actions cache with per-service scopes (`scope=api`, `scope=frontend`) so the two services don't share or evict each other's cache.
+
+### Deploy workflows: staging and production
+
+Two separate workflows, intentionally different in how they trigger.
+
+**`deploy-staging.yml`** triggers automatically via `workflow_run` after a successful build on `main`. It derives the image tag as `sha-<short>` from the triggering commit — the same tag `docker/metadata-action` produced — and SSHes into the VPS to pull and restart the stack.
+
+**`deploy-prod.yml`** is `workflow_dispatch` only — it never runs automatically. You provide a `version` input (e.g. `1.2.3`), the workflow validates it matches semver format, then SSHes in and deploys that exact image tag.
+
+Both workflows need docker-compose to reference images rather than build contexts. `docker-compose.prod.yml` was updated accordingly:
+
+```yaml
+api:
+  image: ghcr.io/faering/faelab/api:${IMAGE_TAG:?IMAGE_TAG is required}
+frontend:
+  image: ghcr.io/faering/faelab/frontend:${IMAGE_TAG:?IMAGE_TAG is required}
+```
+
+`IMAGE_TAG` is passed as an env var at deploy time. On staging it's `sha-xxxxxxx`; on prod it's the semver string.
+
+### GitHub Environments and secret scoping
+
+Both workflows reference a GitHub Environment (`staging`, `production`). Environments provide two things that matter here:
+
+1. **Scoped secrets and variables**: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `GHCR_PAT`, `DEPLOY_PATH`, and `DEPLOY_SSH_PORT` are set per-environment. The staging workflow literally cannot access the prod server's credentials, regardless of how workflows are triggered.
+
+2. **Approval gate on production**: The `production` environment is configured with Required Reviewers. `deploy-prod.yml` pauses before the deploy job and sends an approval notification. Production never advances without an explicit human confirmation.
+
+The full set of credentials per environment:
+
+| | `staging` | `production` |
+|---|---|---|
+| Secret `DEPLOY_HOST` | VPS IP | VPS IP (same server) |
+| Secret `DEPLOY_USER` | `deploy` | `deploy` |
+| Secret `DEPLOY_SSH_KEY` | Ed25519 private key | same key |
+| Secret `GHCR_PAT` | Classic PAT, `read:packages` scope | same |
+| Variable `DEPLOY_PATH` | `/home/deploy/faelab-staging` | `/home/deploy/faelab` |
+| Variable `DEPLOY_SSH_PORT` | custom port | same |
+| Variable `GHCR_USER` | `faering` | `faering` |
+
+`GHCR_PAT` is a classic token (not fine-grained) because fine-grained tokens don't support the `read:packages` scope needed for `docker login ghcr.io` from an external host. Classic tokens aren't deprecated for this use case.
+
+### VPS preparation: Docker installation and deploy user
+
+Docker was not pre-installed on the Hetzner VPS. Installation from the official apt repository (see [Docker Official Docs](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)):
+
+```bash
+# GPG key and apt source
+sudo apt update && sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+A dedicated `deploy` system user owns the deploy directories and is the only account that runs docker commands during deployment:
+
+```bash
+sudo useradd --system --create-home --shell /bin/bash deploy
+sudo usermod -aG docker deploy
+sudo mkdir -p /home/deploy/faelab /home/deploy/faelab-staging
+sudo chown -R deploy:deploy /home/deploy/faelab /home/deploy/faelab-staging
+```
+
+SSH access for `deploy` was added to `sshd_config` via `AllowUsers`. The SSH key pair used by GitHub Actions was generated locally with `ssh-keygen` and the public key placed in `/home/deploy/.ssh/authorized_keys` via the admin user (since `deploy` had no credentials yet when the key was first installed — a classic chicken-and-egg that requires bootstrapping via any already-authorised user).
+
+### What the full delivery path looks like
+
+```
+git push origin main
+  → build.yml: builds api + frontend, pushes sha-xxxxxxx + main tags to GHCR
+  → deploy-staging.yml: SSH into VPS as deploy, pulls sha-xxxxxxx, restarts stack
+  → staging.domain.com reflects the new commit
+
+git tag v1.2.3 && git push origin v1.2.3
+  → build.yml: builds api + frontend, pushes 1.2.3 + 1.2 + 1 + latest + sha tags
+  → deploy-prod.yml: manual trigger, enter "1.2.3", approve in GitHub UI
+  → domain.com updated
+```
+
+### What's next
+
+The pipeline is wired. The remaining steps before first real traffic:
+
+- [ ] Clone repo and create `.env` + secrets files on the VPS at both deploy paths
+- [x] Complete the nginx HTTPS server block
+- [x] Separate staging and production nginx configurations
+- [ ] Push to `main` and verify the staging deploy runs end-to-end
+- [ ] Tag `v0.1.0` and perform the first production deploy
+
+---
+
+## 0.1.0 (01-03-2026) — Nginx configuration: prod and staging on the same VPS
+
+### The problem: two stacks, one server, one port 443
+
+Running both production and staging on the same VPS creates an immediate conflict: only one process can bind to host port `443`. The production stack owns `80`/`443`. Staging needed its own port pair without sacrificing HTTPS.
+
+### Port separation via Cloudflare Origin Rules
+
+Cloudflare supports connections to [non-standard origin ports](https://developers.cloudflare.com/fundamentals/reference/network-ports/) including `8443`. This made the solution clean:
+
+- **Production nginx** binds to host ports `80`/`443` — handles `faelab.com`
+- **Staging nginx** binds to host ports `8080`/`8443` — handles `staging.faelab.com`
+
+Cloudflare routes `staging.faelab.com` to port `8443` on the VPS using an **Origin Rule** (Cloudflare dashboard → Rules → Origin Rules). From the browser's perspective, `staging.faelab.com` is still standard HTTPS on port 443 — the port remapping is invisible to visitors.
+
+This approach keeps the VPS firewall simple: open four ports (`80`, `443`, `8080`, `8443`), all traffic still flows through Cloudflare.
+
+### Fixing the nginx config bugs
+
+The original nginx config had two silent bugs worth documenting:
+
+**Bug 1: `return 301` makes everything below it unreachable**
+
+The port 80 server block had `return 301` at the top followed by `client_max_body_size` and all the `location` blocks. `return` exits immediately — none of that code ever ran. Real routing was moved to the 443 block where it belongs, and the 80 block became a clean one-liner redirect.
+
+**Bug 2: `add_header` inheritance is opt-in, not opt-out**
+
+In nginx, if a `location` block defines *any* `add_header` directive, it completely overrides all `add_header` directives from the parent `server` block. The static assets location in `apps/frontend/nginx.conf` added `Cache-Control` but not the security headers, so `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy` were silently absent from all static asset responses. The fix is to repeat the security headers in any `location` block that has its own `add_header`.
+
+### Docker project namespacing
+
+Two compose stacks on the same host creates naming collisions for containers, volumes, and networks. Docker Compose uses the directory name as the default project name — both stacks in `/home/deploy/faelab` and `/home/deploy/faelab-staging` would produce slightly different names but it's fragile and implicit.
+
+Explicit `--project-name` flags in both deploy workflows make this unambiguous:
+
+```sh
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  --project-name faelab-prod up -d
+
+# Staging
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml \
+  --project-name faelab-staging up -d
+```
+
+This namespaces everything: `faelab-prod_uploads_data` and `faelab-staging_uploads_data` are completely separate volumes. Postgres data, session cookies, and uploaded files are isolated between environments.
+
+### `docker-compose.staging.yml` as a thin override
+
+Rather than duplicating the entire prod compose file for staging, a minimal override file patches only what differs:
+
+- nginx host ports (`8080`/`8443` instead of `80`/`443`)
+- nginx config volume mount (staging vhost config)
+- Container names (prefixed with `staging_` to avoid confusion in `docker ps`)
+- Postgres and pgAdmin loopback ports (`5433`, `5051` instead of `5432`, `5050`)
+
+Everything else — environment variables, secrets, restart policies, network topology — is inherited from `docker-compose.prod.yml` unchanged. The three-file stack (`base` + `prod` + `staging`) stays DRY.
+
+### SSL certificate coverage
+
+The Cloudflare Origin Certificate was originally issued for `faelab.com` and `www.faelab.com` only. It needs to be reissued as a wildcard (`*.faelab.com` + `faelab.com`) to cover `staging.faelab.com` with the same cert file mounted at `/etc/ssl/cloudflare/` in both nginx containers.
+
 ## Future
 
 - [x] Add CMS UI to modify Skills & Expertise section on Homepage *(completed 0.2.0)*

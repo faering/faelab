@@ -1,0 +1,56 @@
+name: Deploy – Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version to deploy (e.g. 1.2.3 — without the leading v)'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.version }} to production
+    runs-on: ubuntu-latest
+    environment: production   # Requires approval gate configured in GitHub Environments
+
+    steps:
+      - name: Validate version format
+        run: |
+          if ! echo "${{ inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version must be in semver format X.Y.Z (e.g. 1.2.3)"
+            exit 1
+          fi
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ env.SSH_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ${{ vars.DEPLOY_PATH }}
+
+            # Authenticate to GHCR on the server using a fine-grained PAT with read:packages scope
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ vars.GHCR_USER }} --password-stdin
+
+            IMAGE_TAG=${{ inputs.version }} \
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                --project-name faelab-prod \
+                pull api frontend
+
+            IMAGE_TAG=${{ inputs.version }} \
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                --project-name faelab-prod \
+                up -d
+
+            # Remove dangling images left behind by the previous deploy
+            docker image prune -f

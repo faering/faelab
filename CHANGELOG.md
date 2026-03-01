@@ -8,6 +8,25 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ### Added
 
+- **CI/CD pipeline**
+  - `build.yml`: builds and pushes `api` and `frontend` images to GHCR in parallel (matrix strategy) on every push to `main` and on `v*.*.*` tag pushes; uses `docker/metadata-action` to derive semver tags (`1.2.3`, `1.2`, `1`, `latest`) on tag pushes and `main` + `sha-*` on branch pushes; `VITE_API_BASE_URL` baked into the frontend image at build time from repository variables (`STAGING_API_BASE_URL` / `PROD_API_BASE_URL`); per-service GHA layer cache
+  - `deploy-staging.yml`: triggered automatically after a successful build on `main`; derives `sha-<short>` image tag from the triggering commit and SSH-deploys to the staging environment
+  - `deploy-prod.yml`: manual `workflow_dispatch` trigger with a `version` input; validates semver format then SSH-deploys the specified image tag; gated by a GitHub Environment required-reviewer approval step
+  - GitHub Environments (`staging`, `production`) with scoped secrets (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `GHCR_PAT`) and variables (`DEPLOY_PATH`, `DEPLOY_SSH_PORT`, `GHCR_USER`); production environment has a required-reviewer approval gate
+  - Dedicated `deploy` system user on the VPS with Docker group membership and restricted SSH access; Ed25519 key pair for GitHub Actions authentication
+  - `docker-compose.staging.yml` override: staging nginx binds to host ports `8080`/`8443`, distinct container names, separate loopback ports for Postgres (`5433`) and pgAdmin (`5051`); layered on top of `docker-compose.prod.yml` so only differences are expressed
+  - `docker/nginx/nginx.staging.conf`: staging-specific nginx vhost for `staging.faelab.com`; identical routing to prod config
+  - Both deploy workflows updated with explicit `--project-name` (`faelab-prod` / `faelab-staging`) to namespace containers, volumes, and networks between the two stacks
+  - Cloudflare Origin Rule routes `staging.faelab.com` to VPS port `8443` — standard HTTPS port from browser perspective; no non-standard port exposure to visitors
+- **Production infrastructure**
+  - Multi-stage Dockerfiles for `apps/api` and `apps/frontend` with monorepo-aware build contexts
+  - Docker Compose overlay structure: base (`docker-compose.yml`), dev (`docker-compose.dev.yml`), prod (`docker-compose.prod.yml`)
+  - `web` / `internal` Docker network split: Postgres is air-gapped on an `internal: true` network with no outside route
+  - nginx reverse proxy container for production: path-based routing (`/trpc`, `/auth`, `/api`, `/uploads` → API; catch-all → frontend), `client_max_body_size 110m` for video uploads, `CF-Connecting-IP` passthrough for Cloudflare deployments
+  - nginx config inside the frontend container to serve the Vite static build and rewrite all paths to `index.html` for client-side routing
+  - Docker secrets support: `_FILE` convention loader in `env.ts` maps `*_FILE` env vars to their base name by reading the file at runtime — works transparently across local `.env`, CI plain env vars, and Docker secrets
+  - `.env.example` files for `apps/api` and root documenting all required environment variables
+  - `.dockerignore` to exclude `node_modules`, uploads, and secrets from build context
 - **Site Content Management System**
   - Full CMS for homepage content (Hero, About, Skills sections)
   - Database-backed site profiles with CRUD operations via tRPC
@@ -53,23 +72,21 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ### Changed
 
+- `docker-compose.prod.yml` `api` and `frontend` services now reference pre-built GHCR images (`ghcr.io/faering/faelab/{api,frontend}:${IMAGE_TAG}`) instead of building on the server; `VITE_API_BASE_URL` removed from compose (baked into image at CI build time).
+- Project renamed from `portfolio` to `faelab` — repository, container names, TypeScript imports, and default content values updated throughout.
 - Featured and Projects pages now load projects from the database (tRPC) instead of local static data.
 - CMS save/delete now return to the list view by default.
-- CMS now includes three main sections: Home, Projects, and Videos
-- Projects CMS now uses FileUploader component for image uploads
-- Navigation header includes Videos link between Projects and Contact
+- CMS now includes three main sections: Home, Projects, and Videos.
+- Projects CMS now uses FileUploader component for image uploads.
+- Navigation header includes Videos link between Projects and Contact.
 
 ### Fixed
 
+- Docker Compose dev override now moves Postgres and pgAdmin off the `internal` network onto an ordinary bridge network, fixing silent port-binding failures on Docker Desktop / WSL2.
 - CORS + cookie handling for browser-based API requests.
-- File cleanup prevents orphaned uploads when content is updated or deleted
-
-### Remaining
-
-- Wire up the contact form to a real delivery mechanism (email service / backend).
-- Improve accessibility and keyboard navigation across interactive controls.
-- Build a video player to watch videos on the website
-- Add video playlist/categorization feature
+- File cleanup prevents orphaned uploads when content is updated or deleted.
+- Removed leftover `ALTER TABLE` migration fragment from `migrations.sql`.
+- Added debug logging to the authentication flow to improve diagnosability.
 
 ## [0.1.0-alpha] - 2026-01-24
 
@@ -115,5 +132,6 @@ First public alpha of the portfolio site: core pages, theme system, and a fully 
 - Contact form currently resets locally and logs to the console; it is not wired to an email/back-end service yet.
 - Projects have to be manually added in `src/data/Projects.tsx` (CMS upcoming in future release)
 
-[Unreleased]: https://github.com/faering/portfolio-website/compare/0.1.0-alpha...HEAD
-[0.1.0-alpha]: https://github.com/faering/portfolio-website/releases/tag/0.1.0-alpha
+[Unreleased]: https://github.com/faering/faelab/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/faering/faelab/compare/0.1.0-alpha...v0.1.0
+[0.1.0-alpha]: https://github.com/faering/faelab/releases/tag/0.1.0-alpha

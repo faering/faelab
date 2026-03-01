@@ -1,0 +1,59 @@
+name: Deploy – Staging
+
+on:
+  workflow_run:
+    workflows: ["Build & Push"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to staging
+    # Only run if the build succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      # Derive the sha- tag that docker/metadata-action produced during build,
+      # e.g. head_sha "a1b2c3d4e5f6..." → IMAGE_TAG "sha-a1b2c3d"
+      - name: Derive image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+          echo "value=sha-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ env.SSH_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ${{ vars.DEPLOY_PATH }}
+
+            # Authenticate to GHCR on the server using a PAT with read:packages scope
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ vars.GHCR_USER }} --password-stdin
+
+            IMAGE_TAG=${{ steps.tag.outputs.value }} \
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                -f docker-compose.staging.yml \
+                --project-name faelab-staging \
+                pull api frontend
+
+            IMAGE_TAG=${{ steps.tag.outputs.value }} \
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                -f docker-compose.staging.yml \
+                --project-name faelab-staging \
+                up -d
+
+            # Remove dangling images left behind by the previous deploy
+            docker image prune -f
