@@ -735,6 +735,148 @@ The infrastructure is in place. The next step is actually deploying — provisio
 
 The remaining rough edge is the nginx HTTPS block: the config currently redirects all port 80 traffic to HTTPS but the 443 server block is a placeholder. This needs to be completed before the first real deployment with traffic.
 
+---
+
+## 0.1.0 (01-03-2026) — CI/CD: Build, Push, and Deploy via GitHub Actions
+
+### What I set out to do
+
+With the infrastructure layer done, the remaining gap was the delivery pipeline: how does a commit on `main` become a running container on the VPS without manual steps?
+
+The goal was a fully automated path from `git push` to running containers, with a clear separation between staging (automatic) and production (intentional, gated).
+
+### Versioning strategy: unified semver on git tags
+
+Because `api` and `frontend` are deployed together from the same compose file, they share a single version. Individual package versions in each `package.json` exist for tooling purposes but don't drive the image tagging.
+
+**Git tags are the source of truth for production releases.** Pushing `v1.2.3` produces semver-tagged images. Pushing to `main` produces `main` + `sha-*` tagged images for staging. There's no automation that derives version numbers — versions are explicit, intentional acts.
+
+This approach was chosen over per-service versioning because it matches how the stack is actually deployed: as a unit. A compatibility matrix between `api:x.y.z` and `frontend:a.b.c` would add overhead with no benefit for a single-owner monorepo.
+
+### Build workflow (`build.yml`)
+
+Triggers:
+- Push to `main` → staging-grade build
+- Push of a `v*.*.*` tag → production-grade build
+
+Both `api` and `frontend` are built in parallel using a matrix strategy. `fail-fast: false` means one service failing mid-push doesn't cancel the other.
+
+Image tagging is handled by `docker/metadata-action`, which derives tags from git context:
+
+| Trigger | Tags produced |
+|---|---|
+| `v1.2.3` tag | `1.2.3`, `1.2`, `1`, `latest`, `sha-a1b2c3d` |
+| `main` push | `main`, `sha-a1b2c3d` |
+
+The SHA tag is always included, on both paths. It's what staging actually deploys — an immutable reference to a specific build, not a mutable `main` pointer.
+
+**`VITE_API_BASE_URL` is environment-specific at build time**, not runtime. Because Vite statically substitutes `import.meta.env.VITE_*` into the bundle, it must be baked in when the image is built. A `Resolve build args` step selects the right URL based on whether the trigger is a tag (prod URL) or a branch push (staging URL), sourced from repository-level variables:
+
+- `STAGING_API_BASE_URL` — e.g. `https://staging.domain.com`
+- `PROD_API_BASE_URL` — e.g. `https://domain.com`
+
+This means the frontend image is environment-specific by design — one image targets staging, another targets prod. This isn't a workaround; it's a consequence of how Vite works, documented explicitly.
+
+Layer caching uses GitHub Actions cache with per-service scopes (`scope=api`, `scope=frontend`) so the two services don't share or evict each other's cache.
+
+### Deploy workflows: staging and production
+
+Two separate workflows, intentionally different in how they trigger.
+
+**`deploy-staging.yml`** triggers automatically via `workflow_run` after a successful build on `main`. It derives the image tag as `sha-<short>` from the triggering commit — the same tag `docker/metadata-action` produced — and SSHes into the VPS to pull and restart the stack.
+
+**`deploy-prod.yml`** is `workflow_dispatch` only — it never runs automatically. You provide a `version` input (e.g. `1.2.3`), the workflow validates it matches semver format, then SSHes in and deploys that exact image tag.
+
+Both workflows need docker-compose to reference images rather than build contexts. `docker-compose.prod.yml` was updated accordingly:
+
+```yaml
+api:
+  image: ghcr.io/faering/faelab/api:${IMAGE_TAG:?IMAGE_TAG is required}
+frontend:
+  image: ghcr.io/faering/faelab/frontend:${IMAGE_TAG:?IMAGE_TAG is required}
+```
+
+`IMAGE_TAG` is passed as an env var at deploy time. On staging it's `sha-xxxxxxx`; on prod it's the semver string.
+
+### GitHub Environments and secret scoping
+
+Both workflows reference a GitHub Environment (`staging`, `production`). Environments provide two things that matter here:
+
+1. **Scoped secrets and variables**: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `GHCR_PAT`, `DEPLOY_PATH`, and `DEPLOY_SSH_PORT` are set per-environment. The staging workflow literally cannot access the prod server's credentials, regardless of how workflows are triggered.
+
+2. **Approval gate on production**: The `production` environment is configured with Required Reviewers. `deploy-prod.yml` pauses before the deploy job and sends an approval notification. Production never advances without an explicit human confirmation.
+
+The full set of credentials per environment:
+
+| | `staging` | `production` |
+|---|---|---|
+| Secret `DEPLOY_HOST` | VPS IP | VPS IP (same server) |
+| Secret `DEPLOY_USER` | `deploy` | `deploy` |
+| Secret `DEPLOY_SSH_KEY` | Ed25519 private key | same key |
+| Secret `GHCR_PAT` | Classic PAT, `read:packages` scope | same |
+| Variable `DEPLOY_PATH` | `/home/deploy/faelab-staging` | `/home/deploy/faelab` |
+| Variable `DEPLOY_SSH_PORT` | custom port | same |
+| Variable `GHCR_USER` | `faering` | `faering` |
+
+`GHCR_PAT` is a classic token (not fine-grained) because fine-grained tokens don't support the `read:packages` scope needed for `docker login ghcr.io` from an external host. Classic tokens aren't deprecated for this use case.
+
+### VPS preparation: Docker installation and deploy user
+
+Docker was not pre-installed on the Hetzner VPS. Installation from the official apt repository (see [Docker Official Docs](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)):
+
+```bash
+# GPG key and apt source
+sudo apt update && sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+A dedicated `deploy` system user owns the deploy directories and is the only account that runs docker commands during deployment:
+
+```bash
+sudo useradd --system --create-home --shell /bin/bash deploy
+sudo usermod -aG docker deploy
+sudo mkdir -p /home/deploy/faelab /home/deploy/faelab-staging
+sudo chown -R deploy:deploy /home/deploy/faelab /home/deploy/faelab-staging
+```
+
+SSH access for `deploy` was added to `sshd_config` via `AllowUsers`. The SSH key pair used by GitHub Actions was generated locally with `ssh-keygen` and the public key placed in `/home/deploy/.ssh/authorized_keys` via the admin user (since `deploy` had no credentials yet when the key was first installed — a classic chicken-and-egg that requires bootstrapping via any already-authorised user).
+
+### What the full delivery path looks like
+
+```
+git push origin main
+  → build.yml: builds api + frontend, pushes sha-xxxxxxx + main tags to GHCR
+  → deploy-staging.yml: SSH into VPS as deploy, pulls sha-xxxxxxx, restarts stack
+  → staging.domain.com reflects the new commit
+
+git tag v1.2.3 && git push origin v1.2.3
+  → build.yml: builds api + frontend, pushes 1.2.3 + 1.2 + 1 + latest + sha tags
+  → deploy-prod.yml: manual trigger, enter "1.2.3", approve in GitHub UI
+  → domain.com updated
+```
+
+### What's next
+
+The pipeline is wired. The remaining steps before first real traffic:
+
+- [ ] Clone repo and create `.env` + secrets files on the VPS at both deploy paths
+- [ ] Complete the nginx HTTPS server block (currently a placeholder)
+- [ ] Push to `main` and verify the staging deploy runs end-to-end
+- [ ] Tag `v0.1.0` and perform the first production deploy
+
 ## Future
 
 - [x] Add CMS UI to modify Skills & Expertise section on Homepage *(completed 0.2.0)*

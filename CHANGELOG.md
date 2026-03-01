@@ -8,6 +8,12 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ### Added
 
+- **CI/CD pipeline**
+  - `build.yml`: builds and pushes `api` and `frontend` images to GHCR in parallel (matrix strategy) on every push to `main` and on `v*.*.*` tag pushes; uses `docker/metadata-action` to derive semver tags (`1.2.3`, `1.2`, `1`, `latest`) on tag pushes and `main` + `sha-*` on branch pushes; `VITE_API_BASE_URL` baked into the frontend image at build time from repository variables (`STAGING_API_BASE_URL` / `PROD_API_BASE_URL`); per-service GHA layer cache
+  - `deploy-staging.yml`: triggered automatically after a successful build on `main`; derives `sha-<short>` image tag from the triggering commit and SSH-deploys to the staging environment
+  - `deploy-prod.yml`: manual `workflow_dispatch` trigger with a `version` input; validates semver format then SSH-deploys the specified image tag; gated by a GitHub Environment required-reviewer approval step
+  - GitHub Environments (`staging`, `production`) with scoped secrets (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `GHCR_PAT`) and variables (`DEPLOY_PATH`, `DEPLOY_SSH_PORT`, `GHCR_USER`); production environment has a required-reviewer approval gate
+  - Dedicated `deploy` system user on the VPS with Docker group membership and restricted SSH access; Ed25519 key pair for GitHub Actions authentication
 - **Production infrastructure**
   - Multi-stage Dockerfiles for `apps/api` and `apps/frontend` with monorepo-aware build contexts
   - Docker Compose overlay structure: base (`docker-compose.yml`), dev (`docker-compose.dev.yml`), prod (`docker-compose.prod.yml`)
@@ -62,6 +68,7 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
 
 ### Changed
 
+- `docker-compose.prod.yml` `api` and `frontend` services now reference pre-built GHCR images (`ghcr.io/faering/faelab/{api,frontend}:${IMAGE_TAG}`) instead of building on the server; `VITE_API_BASE_URL` removed from compose (baked into image at CI build time).
 - Project renamed from `portfolio` to `faelab` — repository, container names, TypeScript imports, and default content values updated throughout.
 - Featured and Projects pages now load projects from the database (tRPC) instead of local static data.
 - CMS save/delete now return to the list view by default.
