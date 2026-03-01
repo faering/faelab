@@ -1,88 +1,28 @@
+# Base services: postgres + pgadmin.
+# Port bindings, restart policies, and application services (api, frontend,
+# nginx) are added by environment-specific override files:
+#
+#   Local dev:    
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   Staging/prod: 
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# In local dev, run api and frontend natively for hot-reload:
+#   pnpm --filter api dev
+#   pnpm --filter frontend dev
+# or simply: 
+#   pnpm dev
+
 services:
 
-  # ── Reverse proxy ──────────────────────────────────────────────────────────
-  nginx:
-    image: nginx:alpine
-    container_name: faelab_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"   # Cloudflare → Hetzner firewall → UFW → here (TLS terminates at CF)
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - frontend
-      - api
-    networks:
-      - web
-
-  # ── Frontend (static SPA) ──────────────────────────────────────────────────
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-      args:
-        # Must point to the public domain so the browser can reach the API
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?VITE_API_BASE_URL is required}
-    container_name: faelab_frontend
-    restart: unless-stopped
-    networks:
-      - web
-
-  # ── API (Fastify + tRPC) ───────────────────────────────────────────────────
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: faelab_api
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      # Database (password is inline here; the .env file is server-side only)
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      # CORS – comma-separated production origins
-      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
-      # Auth
-      AUTH_SESSION_SECRET_FILE: /run/secrets/auth_session_secret
-      AUTH_METHOD: ${AUTH_METHOD:-github}
-      AUTH_ALLOWED_GITHUB_LOGIN: ${AUTH_ALLOWED_GITHUB_LOGIN:-}
-      AUTH_ALLOWED_GITHUB_ID:    ${AUTH_ALLOWED_GITHUB_ID:-}
-      AUTH_SESSION_TTL_DAYS:     ${AUTH_SESSION_TTL_DAYS:-7}
-      AUTH_SUCCESS_REDIRECT:     ${AUTH_SUCCESS_REDIRECT:?AUTH_SUCCESS_REDIRECT is required}
-      AUTH_FAILURE_REDIRECT:     ${AUTH_FAILURE_REDIRECT:?AUTH_FAILURE_REDIRECT is required}
-      # GitHub OAuth (only needed when AUTH_METHOD=github)
-      GITHUB_CLIENT_ID:          ${GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET_FILE: /run/secrets/github_client_secret
-      GITHUB_CALLBACK_URL:       ${GITHUB_CALLBACK_URL:-}
-      # Local admin (only needed when AUTH_METHOD=local)
-      AUTH_ADMIN_USERNAME:      ${AUTH_ADMIN_USERNAME:-}
-      AUTH_ADMIN_PASSWORD_FILE: /run/secrets/auth_admin_password
-      # Uploads – absolute path inside the container
-      UPLOAD_BASE_DIR: /app/uploads
-    volumes:
-      - uploads_data:/app/uploads
-    depends_on:
-      - postgres
-    secrets:
-      - auth_session_secret
-      - auth_admin_password
-      - github_client_secret
-    networks:
-      - web       # nginx → api
-      - internal  # api → postgres
-
-  # ── Database (internal only) ───────────────────────────────────────────────
+  # ── Database ───────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16
     container_name: faelab_postgres
-    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    # Bound to loopback only – not reachable from outside the host.
-    # UFW blocks port 5432 externally so this is safe in production too.
-    ports:
-      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     secrets:
@@ -90,16 +30,13 @@ services:
     networks:
       - internal
 
-  # ── pgAdmin (localhost SSH-tunnel only) ────────────────────────────────────
+  # ── pgAdmin ────────────────────────────────────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4
     container_name: faelab_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL is required}
       PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_password
-    # Bound to loopback – access via: ssh -L 5050:localhost:5050 user@yourserver
-    ports:
-      - "127.0.0.1:5050:80"
     depends_on:
       - postgres
     volumes:
@@ -114,19 +51,13 @@ secrets:
     file: ./secrets/postgres_password.txt
   pgadmin_password:
     file: ./secrets/pgadmin_password.txt
-  auth_session_secret:
-    file: ./secrets/auth_session_secret.txt
-  auth_admin_password:
-    file: ./secrets/auth_admin_password.txt
-  github_client_secret:
-    file: ./secrets/github_client_secret.txt
 
 networks:
   web:
     driver: bridge      # nginx + frontend + api; has outbound internet access
   internal:
     driver: bridge
-    internal: true      # postgres only; no gateway to outside internet
+    internal: true      # no gateway to outside internet
 
 volumes:
   postgres_data:

@@ -1,0 +1,30 @@
+# docker-compose.dev.yml – local development overrides.
+# Exposes postgres and pgadmin ports directly to the host (no loopback
+# restriction – required for Docker Desktop / WSL2 compatibility).
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Then start api + frontend natively:
+#   pnpm --filter api dev
+#   pnpm --filter frontend dev
+# or simply: 
+#   pnpm dev
+
+services:
+  # In dev, postgres and pgadmin are moved off the internal network so that
+  # host port bindings work on Docker Desktop / WSL2. The internal network has
+  # no host gateway, which silently breaks port publishing on Windows.
+  postgres:
+    ports:
+      - "5432:5432"
+    networks:
+      - dev
+
+  pgadmin:
+    ports:
+      - "5050:80"
+    networks:
+      - dev
+
+networks:
+  dev:
+    driver: bridge
