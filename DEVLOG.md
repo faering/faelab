@@ -873,9 +873,74 @@ git tag v1.2.3 && git push origin v1.2.3
 The pipeline is wired. The remaining steps before first real traffic:
 
 - [ ] Clone repo and create `.env` + secrets files on the VPS at both deploy paths
-- [ ] Complete the nginx HTTPS server block (currently a placeholder)
+- [x] Complete the nginx HTTPS server block
+- [x] Separate staging and production nginx configurations
 - [ ] Push to `main` and verify the staging deploy runs end-to-end
 - [ ] Tag `v0.1.0` and perform the first production deploy
+
+---
+
+## 0.1.0 (01-03-2026) — Nginx configuration: prod and staging on the same VPS
+
+### The problem: two stacks, one server, one port 443
+
+Running both production and staging on the same VPS creates an immediate conflict: only one process can bind to host port `443`. The production stack owns `80`/`443`. Staging needed its own port pair without sacrificing HTTPS.
+
+### Port separation via Cloudflare Origin Rules
+
+Cloudflare supports connections to [non-standard origin ports](https://developers.cloudflare.com/fundamentals/reference/network-ports/) including `8443`. This made the solution clean:
+
+- **Production nginx** binds to host ports `80`/`443` — handles `faelab.com`
+- **Staging nginx** binds to host ports `8080`/`8443` — handles `staging.faelab.com`
+
+Cloudflare routes `staging.faelab.com` to port `8443` on the VPS using an **Origin Rule** (Cloudflare dashboard → Rules → Origin Rules). From the browser's perspective, `staging.faelab.com` is still standard HTTPS on port 443 — the port remapping is invisible to visitors.
+
+This approach keeps the VPS firewall simple: open four ports (`80`, `443`, `8080`, `8443`), all traffic still flows through Cloudflare.
+
+### Fixing the nginx config bugs
+
+The original nginx config had two silent bugs worth documenting:
+
+**Bug 1: `return 301` makes everything below it unreachable**
+
+The port 80 server block had `return 301` at the top followed by `client_max_body_size` and all the `location` blocks. `return` exits immediately — none of that code ever ran. Real routing was moved to the 443 block where it belongs, and the 80 block became a clean one-liner redirect.
+
+**Bug 2: `add_header` inheritance is opt-in, not opt-out**
+
+In nginx, if a `location` block defines *any* `add_header` directive, it completely overrides all `add_header` directives from the parent `server` block. The static assets location in `apps/frontend/nginx.conf` added `Cache-Control` but not the security headers, so `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy` were silently absent from all static asset responses. The fix is to repeat the security headers in any `location` block that has its own `add_header`.
+
+### Docker project namespacing
+
+Two compose stacks on the same host creates naming collisions for containers, volumes, and networks. Docker Compose uses the directory name as the default project name — both stacks in `/home/deploy/faelab` and `/home/deploy/faelab-staging` would produce slightly different names but it's fragile and implicit.
+
+Explicit `--project-name` flags in both deploy workflows make this unambiguous:
+
+```sh
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  --project-name faelab-prod up -d
+
+# Staging
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml \
+  --project-name faelab-staging up -d
+```
+
+This namespaces everything: `faelab-prod_uploads_data` and `faelab-staging_uploads_data` are completely separate volumes. Postgres data, session cookies, and uploaded files are isolated between environments.
+
+### `docker-compose.staging.yml` as a thin override
+
+Rather than duplicating the entire prod compose file for staging, a minimal override file patches only what differs:
+
+- nginx host ports (`8080`/`8443` instead of `80`/`443`)
+- nginx config volume mount (staging vhost config)
+- Container names (prefixed with `staging_` to avoid confusion in `docker ps`)
+- Postgres and pgAdmin loopback ports (`5433`, `5051` instead of `5432`, `5050`)
+
+Everything else — environment variables, secrets, restart policies, network topology — is inherited from `docker-compose.prod.yml` unchanged. The three-file stack (`base` + `prod` + `staging`) stays DRY.
+
+### SSL certificate coverage
+
+The Cloudflare Origin Certificate was originally issued for `faelab.com` and `www.faelab.com` only. It needs to be reissued as a wildcard (`*.faelab.com` + `faelab.com`) to cover `staging.faelab.com` with the same cert file mounted at `/etc/ssl/cloudflare/` in both nginx containers.
 
 ## Future
 

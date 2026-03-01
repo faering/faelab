@@ -21,6 +21,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@faelab/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@faelab/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@fastify/autoload':
         specifier: ^6.3.1
         version: 6.3.1
@@ -39,12 +45,6 @@ importers:
       '@fastify/static':
         specifier: ^9.0.0
         version: 9.0.0
-      '@portfolio/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@portfolio/types':
-        specifier: workspace:*
-        version: link:../../packages/types
       '@trpc/server':
         specifier: ^11.0.0
         version: 11.9.0(typescript@5.9.3)
@@ -128,7 +128,7 @@ importers:
       '@eslint/js':
         specifier: ^9.9.1
         version: 9.39.2
-      '@portfolio/api':
+      '@faelab/api':
         specifier: workspace:*
         version: link:../api
       '@types/react':

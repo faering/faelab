@@ -14,6 +14,10 @@ This project aims to follow the spirit of [Keep a Changelog](https://keepachange
   - `deploy-prod.yml`: manual `workflow_dispatch` trigger with a `version` input; validates semver format then SSH-deploys the specified image tag; gated by a GitHub Environment required-reviewer approval step
   - GitHub Environments (`staging`, `production`) with scoped secrets (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `GHCR_PAT`) and variables (`DEPLOY_PATH`, `DEPLOY_SSH_PORT`, `GHCR_USER`); production environment has a required-reviewer approval gate
   - Dedicated `deploy` system user on the VPS with Docker group membership and restricted SSH access; Ed25519 key pair for GitHub Actions authentication
+  - `docker-compose.staging.yml` override: staging nginx binds to host ports `8080`/`8443`, distinct container names, separate loopback ports for Postgres (`5433`) and pgAdmin (`5051`); layered on top of `docker-compose.prod.yml` so only differences are expressed
+  - `docker/nginx/nginx.staging.conf`: staging-specific nginx vhost for `staging.faelab.com`; identical routing to prod config
+  - Both deploy workflows updated with explicit `--project-name` (`faelab-prod` / `faelab-staging`) to namespace containers, volumes, and networks between the two stacks
+  - Cloudflare Origin Rule routes `staging.faelab.com` to VPS port `8443` — standard HTTPS port from browser perspective; no non-standard port exposure to visitors
 - **Production infrastructure**
   - Multi-stage Dockerfiles for `apps/api` and `apps/frontend` with monorepo-aware build contexts
   - Docker Compose overlay structure: base (`docker-compose.yml`), dev (`docker-compose.dev.yml`), prod (`docker-compose.prod.yml`)
