@@ -1,21 +1,28 @@
-# Base services: postgres + pgadmin.
-# Port bindings, restart policies, and application services (api, frontend,
-# nginx) are added by environment-specific override files:
+﻿# Base compose file: all services.
 #
-#   Local dev:    
-#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-#   Staging/prod: 
-#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# nginx, frontend, and api are tagged with profiles: [app] so they are NOT
+# started by default. Only postgres and pgadmin start without a profile.
+# This means the local dev workflow stays unchanged:
 #
-# In local dev, run api and frontend natively for hot-reload:
-#   pnpm --filter api dev
-#   pnpm --filter frontend dev
-# or simply: 
-#   pnpm dev
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   pnpm dev   # runs api + frontend natively for hot-reload
+#
+# For deployed environments, each env brings its own override file and
+# activates the app profile:
+#
+#   Staging:
+#     IMAGE_TAG=sha-abc1234 docker compose \
+#       -f docker-compose.yml -f docker-compose.staging.yml \
+#       --profile app --project-name faelab-staging up -d
+#
+#   Production:
+#     IMAGE_TAG=1.2.3 docker compose \
+#       -f docker-compose.yml -f docker-compose.prod.yml \
+#       --profile app --project-name faelab-prod up -d
 
 services:
 
-  # ── Database ───────────────────────────────────────────────────────────────
+  # ── Database ────────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16
     container_name: faelab_postgres
@@ -30,7 +37,7 @@ services:
     networks:
       - internal
 
-  # ── pgAdmin ────────────────────────────────────────────────────────────────
+  # ── pgAdmin ──────────────────────────────────────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4
     container_name: faelab_pgadmin
@@ -46,11 +53,67 @@ services:
     networks:
       - internal
 
+  # ── Reverse proxy ────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    profiles: ["app"]
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - web
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    image: ghcr.io/faering/faelab/frontend:${IMAGE_TAG:?IMAGE_TAG is required}
+    profiles: ["app"]
+    networks:
+      - web
+
+  # ── API (Fastify + tRPC) ─────────────────────────────────────────────────────
+  api:
+    image: ghcr.io/faering/faelab/api:${IMAGE_TAG:?IMAGE_TAG is required}
+    profiles: ["app"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
+      AUTH_SESSION_SECRET_FILE: /run/secrets/auth_session_secret
+      AUTH_METHOD: ${AUTH_METHOD:-github}
+      AUTH_ALLOWED_GITHUB_LOGIN: ${AUTH_ALLOWED_GITHUB_LOGIN:-}
+      AUTH_ALLOWED_GITHUB_ID:    ${AUTH_ALLOWED_GITHUB_ID:-}
+      AUTH_SESSION_TTL_DAYS:     ${AUTH_SESSION_TTL_DAYS:-7}
+      AUTH_SUCCESS_REDIRECT:     ${AUTH_SUCCESS_REDIRECT:?AUTH_SUCCESS_REDIRECT is required}
+      AUTH_FAILURE_REDIRECT:     ${AUTH_FAILURE_REDIRECT:?AUTH_FAILURE_REDIRECT is required}
+      GITHUB_CLIENT_ID:          ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET_FILE: /run/secrets/github_client_secret
+      GITHUB_CALLBACK_URL:       ${GITHUB_CALLBACK_URL:-}
+      AUTH_ADMIN_USERNAME:       ${AUTH_ADMIN_USERNAME:-}
+      AUTH_ADMIN_PASSWORD_FILE:  /run/secrets/auth_admin_password
+      UPLOAD_BASE_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - postgres
+    secrets:
+      - auth_session_secret
+      - auth_admin_password
+      - github_client_secret
+    networks:
+      - web
+      - internal
+
 secrets:
   postgres_password:
     file: ./secrets/postgres_password.txt
   pgadmin_password:
     file: ./secrets/pgadmin_password.txt
+  auth_session_secret:
+    file: ./secrets/auth_session_secret.txt
+  auth_admin_password:
+    file: ./secrets/auth_admin_password.txt
+  github_client_secret:
+    file: ./secrets/github_client_secret.txt
 
 networks:
   web:

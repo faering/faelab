@@ -42,16 +42,16 @@ jobs:
             IMAGE_TAG=${{ steps.tag.outputs.value }} \
               docker compose \
                 -f docker-compose.yml \
-                -f docker-compose.prod.yml \
                 -f docker-compose.staging.yml \
+                --profile app \
                 --project-name faelab-staging \
                 pull api frontend
 
             IMAGE_TAG=${{ steps.tag.outputs.value }} \
               docker compose \
                 -f docker-compose.yml \
-                -f docker-compose.prod.yml \
                 -f docker-compose.staging.yml \
+                --profile app \
                 --project-name faelab-staging \
                 up -d
 

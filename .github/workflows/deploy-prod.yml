@@ -42,6 +42,7 @@ jobs:
               docker compose \
                 -f docker-compose.yml \
                 -f docker-compose.prod.yml \
+                --profile app \
                 --project-name faelab-prod \
                 pull api frontend
 
@@ -49,6 +50,7 @@ jobs:
               docker compose \
                 -f docker-compose.yml \
                 -f docker-compose.prod.yml \
+                --profile app \
                 --project-name faelab-prod \
                 up -d
 
