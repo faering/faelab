@@ -39,10 +39,18 @@ jobs:
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ vars.GHCR_USER }} --password-stdin
 
             IMAGE_TAG=${{ inputs.version }} \
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml pull api frontend
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                --project-name faelab-prod \
+                pull api frontend
 
             IMAGE_TAG=${{ inputs.version }} \
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                --project-name faelab-prod \
+                up -d
 
             # Remove dangling images left behind by the previous deploy
             docker image prune -f
