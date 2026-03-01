@@ -35,3 +35,10 @@ apps/api/uploads/*
 *.sln
 *.sw?
 .env
+
+# Local Docker secrets (never commit real secret values)
+secrets/*
+!secrets/.gitkeep
+
+# Local Docker Compose overrides
+docker-compose.override.yml

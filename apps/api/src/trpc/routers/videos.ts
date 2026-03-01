@@ -5,7 +5,7 @@ import {
   DeleteVideoInputSchema,
   VideoSchema,
   UpdateVideoInputSchema,
-} from '@portfolio/types';
+} from '@faelab/types';
 import {
   createVideo,
   deleteVideo,

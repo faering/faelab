@@ -113,14 +113,8 @@ CREATE TABLE IF NOT EXISTS skill_items (
     category_id TEXT NOT NULL REFERENCES skill_categories(id) ON DELETE CASCADE,
     position INT NOT NULL,
     label TEXT NOT NULL,
-    "skillLevel" INT NOT NULL DEFAULT 80 CHECK ("skillLevel" >= 0 AND "skillLevel" <= 100)
+    skillLevel INT NOT NULL DEFAULT 80 CHECK (skillLevel >= 0 AND skillLevel <= 100)
 );
-
-ALTER TABLE skill_items
-    ADD COLUMN IF NOT EXISTS "skillLevel" INT NOT NULL DEFAULT 80;
-
-ALTER TABLE skill_items
-    ADD CONSTRAINT IF NOT EXISTS skill_items_level_range CHECK ("skillLevel" >= 0 AND "skillLevel" <= 100);
 
 CREATE TABLE IF NOT EXISTS skill_technologies (
     id TEXT PRIMARY KEY,

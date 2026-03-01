@@ -1,4 +1,4 @@
-import { query, queryOne } from '@portfolio/db';
+import { query, queryOne } from '@faelab/db';
 
 export type AdminSession = {
   id: string;

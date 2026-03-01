@@ -109,7 +109,10 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post(
     '/auth/local/login',
     async (req: FastifyRequest<{ Body: { username?: string; password?: string } }>, reply) => {
+      console.debug('[auth/local/login] handler entered');
+
       if (getAuthMethod() !== 'local') {
+        console.debug('[auth/local/login] auth method is not local, returning 404');
         reply.code(404).send({ error: 'Local auth not enabled' });
         return;
       }
@@ -119,36 +122,49 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       const expectedUser = process.env.AUTH_ADMIN_USERNAME?.trim();
       const expectedPass = process.env.AUTH_ADMIN_PASSWORD ?? '';
 
+      console.debug('[auth/local/login] credentials check — username present:', !!username, '| expectedUser present:', !!expectedUser, '| expectedPass present:', !!expectedPass);
+
       if (!username || !expectedUser || !expectedPass) {
+        console.debug('[auth/local/login] missing credentials in env or request body');
         reply.code(400).send({ error: 'Admin credentials not configured' });
         return;
       }
 
       if (username !== expectedUser || password !== expectedPass) {
+        console.debug('[auth/local/login] credential mismatch — usernameMatch:', username === expectedUser, '| passwordMatch:', password === expectedPass);
         reply.code(401).send({ error: 'Invalid credentials' });
         return;
       }
 
-      const dbUser = await upsertLocalAdmin({
-        login: username,
-        displayName: username,
-      });
+      console.debug('[auth/local/login] credentials valid, upserting local admin user');
 
-      const session = await createSession(
-        {
-          userId: dbUser.id,
-          githubId: dbUser.githubId,
-          login: dbUser.githubLogin,
-        },
-        getSessionTtlMs(),
-      );
+      try {
+        const dbUser = await upsertLocalAdmin({
+          login: username,
+          displayName: username,
+        });
+        console.debug('[auth/local/login] upsertLocalAdmin succeeded — userId:', dbUser.id);
 
-      reply.setCookie(SESSION_COOKIE, session.id, {
-        ...getCookieOptions(),
-        maxAge: getSessionTtlMs() / 1000,
-      });
+        const session = await createSession(
+          {
+            userId: dbUser.id,
+            githubId: dbUser.githubId,
+            login: dbUser.githubLogin,
+          },
+          getSessionTtlMs(),
+        );
+        console.debug('[auth/local/login] createSession succeeded — sessionId:', session.id);
 
-      reply.send({ ok: true });
+        reply.setCookie(SESSION_COOKIE, session.id, {
+          ...getCookieOptions(),
+          maxAge: getSessionTtlMs() / 1000,
+        });
+
+        reply.send({ ok: true });
+      } catch (err) {
+        console.error('[auth/local/login] error during DB operation:', err);
+        reply.code(500).send({ error: 'Internal Server Error' });
+      }
     },
   );
 

@@ -1,5 +1,5 @@
-import { query, queryOne } from '@portfolio/db';
-import type { CreateProjectInput, Project } from '@portfolio/types';
+import { query, queryOne } from '@faelab/db';
+import type { CreateProjectInput, Project } from '@faelab/types';
 import { deleteUploadedFile } from '../../utils/fileCleanup.js';
 
 type DbProjectRow = Omit<Project, 'image' | 'tags' | 'repoUrl' | 'liveUrl'> & {

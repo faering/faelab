@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.github
+
+# Dependencies – installed fresh inside the image
+**/node_modules
+
+# Build outputs – rebuilt inside the image
+**/dist
+**/dist-ssr
+*.local
+
+# Environment & secrets – injected at runtime via docker-compose / secret files
+.env
+apps/api/.env
+secrets/
+
+# Uploaded files – mounted as a named volume at runtime
+apps/api/uploads/**/*
+!apps/api/uploads/images/.gitkeep
+!apps/api/uploads/videos/.gitkeep
+
+# Dev tooling not needed in the image
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Docs and CI (not needed inside the container)
+CHANGELOG.md
+DEVLOG.md
+README.md

@@ -1,30 +1,65 @@
+# Base services: postgres + pgadmin.
+# Port bindings, restart policies, and application services (api, frontend,
+# nginx) are added by environment-specific override files:
+#
+#   Local dev:    
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   Staging/prod: 
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# In local dev, run api and frontend natively for hot-reload:
+#   pnpm --filter api dev
+#   pnpm --filter frontend dev
+# or simply: 
+#   pnpm dev
+
 services:
+
+  # ── Database ───────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16
-    container_name: portfolio_postgres
-    restart: unless-stopped
+    container_name: faelab_postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portfolio}
-      POSTGRES_DB: ${POSTGRES_DB:-portfolio}
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - pgdata:/var/lib/postgresql/data/pgdata
+    secrets:
+      - postgres_password
+    networks:
+      - internal
 
+  # ── pgAdmin ────────────────────────────────────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4
+    container_name: faelab_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-    ports:
-    - "5050:80"
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL is required}
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_password
     depends_on:
-    - postgres
+      - postgres
     volumes:
-    - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_data:/var/lib/pgadmin
+    secrets:
+      - pgadmin_password
+    networks:
+      - internal
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  pgadmin_password:
+    file: ./secrets/pgadmin_password.txt
+
+networks:
+  web:
+    driver: bridge      # nginx + frontend + api; has outbound internet access
+  internal:
+    driver: bridge
+    internal: true      # no gateway to outside internet
+
 volumes:
   postgres_data:
-  pgdata:
   pgadmin_data:
+  uploads_data:         # persistent uploads shared by the api container
