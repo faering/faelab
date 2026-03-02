@@ -21,9 +21,13 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.1 --activate
 
-# Copy installed deps from previous stage
-COPY --from=deps /app/node_modules          node_modules/
-COPY --from=deps /app/apps/api/node_modules apps/api/node_modules/
+# Copy installed deps from previous stage.
+# pnpm stores each workspace package's own node_modules separately — all three
+# must be copied or their direct dependencies (pg, tsx, zod, etc.) won't resolve.
+COPY --from=deps /app/node_modules               node_modules/
+COPY --from=deps /app/apps/api/node_modules      apps/api/node_modules/
+COPY --from=deps /app/packages/db/node_modules   packages/db/node_modules/
+COPY --from=deps /app/packages/types/node_modules packages/types/node_modules/
 
 # Copy source
 COPY package.json pnpm-workspace.yaml ./
